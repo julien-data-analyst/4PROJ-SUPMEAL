@@ -1,0 +1,39 @@
+[project]
+name = "recipe-api"
+version = "0.1.0"
+requires-python = ">=3.13"
+
+dependencies = [
+    "django>=5.2",
+    "djangorestframework",
+    "django-filter",
+    "django-cors-headers",
+    "django-allauth",
+    "dj-rest-auth",
+    "djangorestframework-simplejwt",
+    "drf-spectacular",
+    "django-environ",
+    "psycopg[binary]",
+    "pillow",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "basedpyright",
+    "pytest",
+    "pytest-django",
+    "factory-boy",
+    "coverage",
+    "django-extensions",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E","F","I","UP","DJ"]
+
+[tool.basedpyright]
+typeCheckingMode = "recommended"

@@ -1,0 +1,81 @@
+services:
+
+  # DATABASE SERVICE
+  postgres:
+    image: postgres:16
+    container_name: recipe_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recipes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # DJANFO BACKEND SERVICE
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile_dev
+
+    container_name: recipe_backend
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./backend:/app
+
+    ports:
+      - "${BACKEND_PORT}:8000"
+
+    # Use of uv for development purposes, permits to manage packages more easily, do not do it in the docker compose prod (use of uv pip instead)
+    command: >
+      sh -c "
+      uv sync &&
+      uv run python manage.py migrate &&
+      uv run python manage.py runserver 0.0.0.0:8000
+      "
+
+  # NUXT/VUE FRONTEND SERVICE
+  frontend:
+    build:
+      context: ./frontend
+
+    container_name: recipe_frontend
+
+    depends_on:
+      - backend
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+    ports:
+      - "${FRONTEND_PORT}:3000"
+
+    command: >
+      sh -c "
+      npm install &&
+      npm run dev -- --host
+      "
+    #stdin_open: true # Let the container open even after finishing his command
+    #tty: true
+
+volumes:
+  postgres_data:
