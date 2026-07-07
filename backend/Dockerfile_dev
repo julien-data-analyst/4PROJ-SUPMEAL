@@ -1,0 +1,16 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y gcc libpq-dev curl
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+COPY pyproject.toml .
+COPY uv.lock* ./
+
+RUN uv sync --all-groups || true
+
+COPY . .
+
+EXPOSE 8000
