@@ -1,0 +1,696 @@
+/* ==========================================================================
+   SUPMEAL — Design system / charte graphique
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Couleurs */
+  --primary: #84FA16;        /* vert clair (primaire) */
+  --primary-dark: #2AC204;   /* vert foncé (primaire) */
+  --accent: #1A7F02;         /* vert profond (accent) */
+  --gray-light: #F5F5F5;     /* gris clair */
+  --gray-dark: #333333;      /* gris foncé */
+  --error: #E74C3C;          /* rouge erreur */
+  --warning: #F1C40F;        /* jaune warning */
+  --white: #FFFFFF;
+  --border: #E0E0E0;         /* bordures / séparateurs */
+
+  /* Teintes dérivées */
+  --primary-tint: #EAFBDA;
+  --accent-tint: #E3F5DC;
+  --warning-tint: #FCF3CF;
+  --error-tint: #FBEAE8;
+  --gray-tint: #EDEDED;
+  --text-muted: #767676;
+
+  /* Typo */
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Layout */
+  --sidebar-w: 236px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.08);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font);
+  color: var(--gray-dark);
+  background: var(--gray-light);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4, p, ul, ol { margin: 0; }
+ul { list-style: none; padding: 0; }
+a { color: inherit; text-decoration: none; }
+button { font-family: var(--font); cursor: pointer; }
+img { max-width: 100%; display: block; }
+
+/* Typographie */
+.text-title2 { font-size: 24px; font-weight: 600; }
+.text-title3 { font-size: 18px; font-weight: 600; }
+.text-body { font-size: 14px; font-weight: 400; }
+.text-small { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+
+/* ==========================================================================
+   Layout général : sidebar + main
+   ========================================================================== */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 4px 10px 22px;
+  letter-spacing: .2px;
+}
+.logo .letters { color: var(--accent); }
+.logo .pan-icon, .logo .knife-icon { width: 22px; height: 22px; }
+
+.nav-list { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--gray-dark);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background .15s, color .15s;
+}
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.nav-item:hover { background: var(--gray-light); }
+.nav-item.active {
+  background: var(--primary-tint);
+  color: var(--accent);
+  font-weight: 600;
+}
+.nav-item.active svg { stroke: var(--accent); }
+.nav-item.danger { color: var(--error); }
+.nav-item.danger svg { stroke: var(--error); }
+
+.nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 10px 4px;
+}
+
+.sidebar-bottom { display: flex; flex-direction: column; gap: 2px; }
+
+/* ==========================================================================
+   Main content
+   ========================================================================== */
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 26px 32px 60px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.topbar-left .back-link {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--text-muted); font-size: 13px; font-weight: 500;
+}
+.topbar-left .back-link svg { width: 16px; height: 16px; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.section { margin-bottom: 30px; }
+.section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.section-head .see-all { color: var(--accent); font-size: 13px; font-weight: 600; }
+
+/* ==========================================================================
+   Boutons
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: filter .15s, background .15s, box-shadow .15s;
+}
+.btn svg { width: 15px; height: 15px; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #163E00;
+}
+.btn-primary:hover { filter: brightness(1.05); }
+
+.btn-secondary {
+  background: var(--white);
+  border-color: var(--primary-dark);
+  color: var(--accent);
+}
+.btn-secondary:hover { background: var(--primary-tint); }
+
+.btn-destructive {
+  background: var(--error);
+  color: var(--white);
+}
+.btn-destructive:hover { filter: brightness(1.05); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--gray-dark);
+  border-color: var(--border);
+}
+.btn-ghost:hover { background: var(--gray-light); }
+
+.btn-disabled, .btn:disabled {
+  background: var(--gray-tint);
+  color: #A7A7A7;
+  border-color: var(--gray-tint);
+  cursor: not-allowed;
+}
+
+.btn-icon {
+  width: 34px; height: 34px; padding: 0;
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--gray-dark);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-icon:hover { background: var(--gray-light); }
+.btn-icon svg { width: 16px; height: 16px; }
+
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+/* ==========================================================================
+   Cartes
+   ========================================================================== */
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-grid {
+  display: grid;
+  gap: 16px;
+}
+
+/* recette thumbnail card */
+.recipe-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: box-shadow .15s, transform .15s;
+  cursor: pointer;
+}
+.recipe-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.recipe-card .thumb {
+  width: 100%; height: 110px; object-fit: cover; background: var(--gray-tint);
+}
+.recipe-card .body { padding: 10px 12px 12px; }
+.recipe-card .title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.recipe-card .meta { font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; gap: 6px; }
+
+/* cookbook mini card */
+.cookbook-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 12px;
+}
+.cookbook-card .cover {
+  width: 46px; height: 46px; border-radius: 8px; object-fit: cover;
+  background: var(--primary-tint); flex-shrink: 0;
+}
+.cookbook-card .name { font-size: 13px; font-weight: 600; }
+.cookbook-card .count { font-size: 11px; color: var(--text-muted); }
+
+/* planning mini card */
+.planning-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px;
+}
+.planning-card .icon-box {
+  width: 42px; height: 42px; border-radius: 8px;
+  background: var(--primary-tint); color: var(--accent);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.planning-card .icon-box svg { width: 20px; height: 20px; }
+.planning-card .name { font-size: 13px; font-weight: 600; }
+.planning-card .count { font-size: 11px; color: var(--text-muted); }
+
+/* liste de résultat (recherche / cookbooks partagés) */
+.result-row {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 10px;
+}
+.result-row .thumb {
+  width: 44px; height: 44px; border-radius: 8px; object-fit: cover;
+  background: var(--gray-tint); flex-shrink: 0;
+}
+.result-row .info { flex: 1; min-width: 0; }
+.result-row .title { font-size: 13.5px; font-weight: 600; }
+.result-row .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.result-row .right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* ==========================================================================
+   Badges / tags
+   ========================================================================== */
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600;
+  white-space: nowrap;
+}
+.badge-green { background: var(--primary-tint); color: var(--accent); }
+.badge-gray { background: var(--gray-tint); color: var(--gray-dark); }
+.badge-gray-outline { background: var(--white); color: var(--text-muted); border: 1px solid var(--border); }
+.badge-yellow { background: var(--warning-tint); color: #8A6D00; }
+.badge-red { background: var(--error-tint); color: #B23125; }
+.badge-blue { background: #E7F1FB; color: #1D5C9B; }
+
+/* ==========================================================================
+   Formulaires
+   ========================================================================== */
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.field label { font-size: 12.5px; font-weight: 600; color: var(--gray-dark); }
+.field .hint { font-size: 11.5px; color: var(--text-muted); }
+
+.input, select.input, textarea.input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 13.5px;
+  background: var(--white);
+  color: var(--gray-dark);
+}
+.input:focus, select.input:focus, textarea.input:focus {
+  outline: none;
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 0 3px var(--primary-tint);
+}
+
+.input-icon-wrap { position: relative; }
+.input-icon-wrap svg {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--text-muted);
+}
+.input-icon-wrap .input { padding-left: 36px; }
+
+.input-with-action { display: flex; align-items: center; gap: 8px; }
+.input-with-action .input { flex: 1; }
+.input-with-action .btn { flex-shrink: 0; }
+
+.field-row { display: flex; gap: 12px; }
+.field-row .field { flex: 1; }
+
+.toggle {
+  position: relative; width: 38px; height: 22px; flex-shrink: 0;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle .track {
+  position: absolute; inset: 0; background: var(--gray-tint);
+  border-radius: 999px; transition: background .15s;
+}
+.toggle .track::after {
+  content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px;
+  background: var(--white); border-radius: 50%; transition: transform .15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,.2);
+}
+.toggle input:checked + .track { background: var(--primary-dark); }
+.toggle input:checked + .track::after { transform: translateX(16px); }
+
+/* ==========================================================================
+   Filtres (recherche)
+   ========================================================================== */
+
+.filters-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 18px;
+}
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-group label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .3px; }
+.filter-group select { min-width: 130px; }
+.filter-toggle { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.filter-toggle span { font-size: 12.5px; font-weight: 500; }
+
+/* ==========================================================================
+   Avatar
+   ========================================================================== */
+
+.avatar {
+  border-radius: 50%; background: var(--primary-tint); color: var(--accent);
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+  flex-shrink: 0; overflow: hidden;
+}
+.avatar svg { width: 55%; height: 55%; }
+.avatar-sm { width: 30px; height: 30px; font-size: 12px; }
+.avatar-md { width: 42px; height: 42px; font-size: 15px; }
+.avatar-lg { width: 92px; height: 92px; font-size: 32px; }
+
+/* ==========================================================================
+   Dropdown "..." menu
+   ========================================================================== */
+
+.menu-wrap { position: relative; }
+.dropdown-menu {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+  min-width: 160px; padding: 6px; z-index: 30; display: none;
+}
+.dropdown-menu.open { display: block; }
+.dropdown-menu button {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 8px 10px; border: none; background: transparent;
+  font-size: 13px; border-radius: var(--radius-sm); text-align: left;
+}
+.dropdown-menu button:hover { background: var(--gray-light); }
+.dropdown-menu button.danger { color: var(--error); }
+.dropdown-menu svg { width: 14px; height: 14px; }
+
+/* ==========================================================================
+   Modales
+   ========================================================================== */
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(20,20,20,.45);
+  display: none; align-items: center; justify-content: center; z-index: 100;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white); border-radius: var(--radius-lg);
+  width: 100%; max-width: 460px; max-height: 90vh; overflow: auto;
+  box-shadow: var(--shadow-md);
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+}
+.modal-body { padding: 20px; }
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 16px 20px; border-top: 1px solid var(--border);
+}
+.modal-close { background: none; border: none; color: var(--text-muted); }
+.modal-close svg { width: 18px; height: 18px; }
+
+/* ==========================================================================
+   Dropzone (import)
+   ========================================================================== */
+
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--gray-light);
+  padding: 50px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  text-align: center;
+}
+.dropzone .icon-circle {
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--primary-tint); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.dropzone .icon-circle svg { width: 26px; height: 26px; }
+
+.tabs-inline {
+  display: inline-flex; background: var(--gray-tint); border-radius: var(--radius-sm);
+  padding: 3px; gap: 2px; margin-bottom: 18px;
+}
+.tabs-inline button {
+  border: none; background: transparent; padding: 7px 18px;
+  border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--text-muted);
+}
+.tabs-inline button.active { background: var(--white); color: var(--gray-dark); box-shadow: var(--shadow-sm); }
+
+/* ==========================================================================
+   Create-new choice cards
+   ========================================================================== */
+
+.choice-card {
+  display: flex; align-items: center; gap: 14px;
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 16px; margin-bottom: 12px; transition: border-color .15s, background .15s;
+}
+.choice-card:hover { border-color: var(--primary-dark); background: var(--primary-tint); }
+.choice-card .icon-box {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--primary-tint); color: var(--accent);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.choice-card .icon-box svg { width: 20px; height: 20px; }
+.choice-card .title { font-size: 14px; font-weight: 600; }
+.choice-card .desc { font-size: 12px; color: var(--text-muted); }
+
+/* ==========================================================================
+   Éditeur de recette
+   ========================================================================== */
+
+.editor-toolbar {
+  display: flex; align-items: center; gap: 4px;
+  border: 1px solid var(--border); border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  padding: 8px; background: var(--white); flex-wrap: wrap;
+}
+.editor-toolbar select {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 5px 8px; font-size: 12.5px; margin-right: 6px;
+}
+.editor-toolbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+.editor-toolbar button {
+  width: 30px; height: 30px; border: none; background: transparent;
+  border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;
+  color: var(--gray-dark);
+}
+.editor-toolbar button:hover { background: var(--gray-light); }
+.editor-toolbar button svg { width: 15px; height: 15px; }
+
+.editor-body {
+  border: 1px solid var(--border); border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: 24px 28px; background: var(--white); min-height: 480px;
+}
+.editor-body h2 { font-size: 17px; font-weight: 700; margin: 22px 0 10px; color: var(--accent); }
+.editor-body h3 { font-size: 14.5px; font-weight: 700; margin: 18px 0 8px; }
+.editor-body ul { list-style: disc; padding-left: 22px; margin-bottom: 10px; }
+.editor-body ul li { margin-bottom: 4px; font-size: 13.5px; }
+.editor-body p { margin-bottom: 10px; font-size: 13.5px; }
+.editor-body h2:first-child { margin-top: 0; }
+
+.recipe-meta-title {
+  font-size: 22px; font-weight: 700; border: none; outline: none;
+  font-family: var(--font); width: 100%; margin-bottom: 4px; background: transparent;
+}
+.recipe-meta-sub { font-size: 12.5px; color: var(--text-muted); }
+
+.readonly-banner {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--warning-tint); color: #8A6D00;
+  border: 1px solid #F0DE9A; border-radius: var(--radius-sm);
+  padding: 10px 14px; font-size: 12.5px; font-weight: 500; margin-top: 16px;
+}
+.readonly-banner svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* ==========================================================================
+   Cookbook — tabs + liste recettes
+   ========================================================================== */
+
+.cookbook-header { margin-bottom: 4px; }
+.cookbook-header .title { font-size: 22px; font-weight: 700; }
+.cookbook-header .sub { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+
+.tabs-underline {
+  display: flex; gap: 22px; border-bottom: 1px solid var(--border); margin: 18px 0 20px;
+}
+.tabs-underline button {
+  border: none; background: none; padding: 10px 2px; font-size: 13.5px;
+  font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent;
+  display: flex; align-items: center; gap: 6px;
+}
+.tabs-underline svg { width: 15px; height: 15px; }
+.tabs-underline button.active { color: var(--accent); border-color: var(--primary-dark); }
+
+.recipe-list-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 14px; border: 1px solid var(--border);
+  border-radius: var(--radius-md); margin-bottom: 10px; background: var(--white);
+}
+.recipe-list-row .thumb { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; background: var(--gray-tint); }
+.recipe-list-row .info { flex: 1; }
+.recipe-list-row .title { font-size: 13.5px; font-weight: 600; margin-bottom: 5px; }
+.recipe-list-row .tags { display: flex; gap: 6px; }
+.recipe-list-row .trash-btn { color: var(--error); background: none; border: none; padding: 6px; }
+.recipe-list-row .trash-btn svg { width: 17px; height: 17px; }
+
+/* ==========================================================================
+   Planning table
+   ========================================================================== */
+
+.planning-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--white); }
+table.planning-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+table.planning-table th, table.planning-table td {
+  border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top;
+  font-size: 12.5px;
+}
+table.planning-table th {
+  background: var(--gray-light); font-weight: 700; font-size: 11.5px;
+  text-transform: uppercase; letter-spacing: .3px; color: var(--text-muted);
+}
+table.planning-table td.row-label { font-weight: 700; background: var(--gray-light); color: var(--gray-dark); white-space: nowrap; }
+table.planning-table td .meal-chip {
+  display: block; padding: 4px 0; font-weight: 500;
+}
+table.planning-table td .meal-chip.empty { color: #C7C7C7; font-style: italic; font-weight: 400; }
+
+.planning-legend { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.planning-legend .item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.planning-legend svg { width: 14px; height: 14px; }
+
+/* ==========================================================================
+   Auth pages (login / register)
+   ========================================================================== */
+
+.auth-shell {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, var(--primary-tint) 0%, var(--gray-light) 55%);
+  padding: 30px;
+}
+.auth-card {
+  width: 100%; max-width: 400px; background: var(--white);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 32px 30px; box-shadow: var(--shadow-md);
+}
+.auth-card .logo { justify-content: center; padding: 0 0 6px; }
+.auth-card .tagline { text-align: center; color: var(--text-muted); font-size: 13px; margin-bottom: 26px; }
+.auth-card .heading { font-size: 19px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+.auth-card .sub-heading { font-size: 12.5px; color: var(--text-muted); text-align: center; margin-bottom: 24px; }
+
+.oauth-row { display: flex; gap: 10px; margin-bottom: 20px; }
+.oauth-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--border); background: var(--white); border-radius: var(--radius-sm);
+  padding: 9px; font-size: 13px; font-weight: 600; color: var(--gray-dark);
+}
+.oauth-btn:hover { background: var(--gray-light); }
+.oauth-btn img, .oauth-btn svg { width: 16px; height: 16px; }
+
+.divider-row { display: flex; align-items: center; gap: 12px; margin: 18px 0; }
+.divider-row .line { flex: 1; height: 1px; background: var(--border); }
+.divider-row span { font-size: 11.5px; color: var(--text-muted); }
+
+.auth-foot { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 18px; }
+.auth-foot a { color: var(--accent); font-weight: 600; }
+
+.password-field { position: relative; }
+.password-field button {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--text-muted); padding: 4px;
+}
+.password-field button svg { width: 16px; height: 16px; }
+.password-field .input { padding-right: 38px; }
+
+.checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+.checkbox-row label { font-size: 12.5px; color: var(--text-muted); }
+.forgot-link { font-size: 12.5px; color: var(--accent); font-weight: 600; margin-left: auto; }
+.checkbox-row-between { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+
+/* ==========================================================================
+   Divers
+   ========================================================================== */
+
+.w-full { width: 100%; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mb-0 { margin-bottom: 0 !important; }
+.text-error { color: var(--error); }
+.text-muted { color: var(--text-muted); }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-8 { gap: 8px; }
+.gap-10 { gap: 10px; }
+
+.danger-zone {
+  border: 1px solid #F3C6BF; background: var(--error-tint);
+  border-radius: var(--radius-md); padding: 16px; margin-top: 26px;
+}
+.danger-zone .title { font-size: 13.5px; font-weight: 700; color: #B23125; margin-bottom: 4px; }
+.danger-zone .desc { font-size: 12px; color: #9C463C; margin-bottom: 12px; }
+
+.confirm-input-wrap { margin: 14px 0; }
+.confirm-input-wrap .hint { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+
+/* ==========================================================================
+   Placeholders "photo" (pas d'images externes dans le prototype)
+   ========================================================================== */
+
+.thumb-ph {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+}
+.ph-a { background: linear-gradient(135deg,#FCEBB6,#F1C40F); }
+.ph-b { background: linear-gradient(135deg,#C7F0A4,#84FA16); }
+.ph-c { background: linear-gradient(135deg,#FBC7BB,#E74C3C); }
+.ph-d { background: linear-gradient(135deg,#AEE9C7,#1A7F02); }
+.ph-e { background: linear-gradient(135deg,#F7D9E3,#E68FAE); }
+.ph-f { background: linear-gradient(135deg,#BEE3F5,#5EA8D6); }
+.ph-g { background: linear-gradient(135deg,#EAFBDA,#2AC204); }
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { padding: 20px; }
+}

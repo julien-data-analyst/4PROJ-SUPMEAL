@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90" width="360" height="90" role="img" aria-label="Logo SUPMEAL">
+  <title>SUPMEAL</title>
+  <defs>
+    <linearGradient id="supmealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#84FA16"/>
+      <stop offset="100%" stop-color="#2AC204"/>
+    </linearGradient>
+  </defs>
+
+  <!-- S U -->
+  <text x="0" y="66" font-family="'Inter', Arial, Helvetica, sans-serif" font-weight="800"
+        font-size="64" letter-spacing="-1" fill="url(#supmealGrad)">SU</text>
+
+  <!-- P → poêle (pan) -->
+  <g transform="translate(84,20)">
+    <!-- manche -->
+    <rect x="-34" y="26" width="40" height="13" rx="6.5"
+          fill="url(#supmealGrad)" transform="rotate(-8 -14 32)"/>
+    <!-- corps de la poêle -->
+    <circle cx="34" cy="30" r="28" fill="url(#supmealGrad)"/>
+    <!-- reflet -->
+    <path d="M20 18 A22 22 0 0 1 44 12" fill="none" stroke="#FFFFFF" stroke-width="4"
+          stroke-linecap="round" opacity="0.35"/>
+  </g>
+
+  <!-- M E A -->
+  <text x="150" y="66" font-family="'Inter', Arial, Helvetica, sans-serif" font-weight="800"
+        font-size="64" letter-spacing="-1" fill="url(#supmealGrad)">MEA</text>
+
+  <!-- L → couteau (knife) -->
+  <g transform="translate(284,10)">
+    <!-- manche (barre verticale du L) -->
+    <rect x="0" y="0" width="17" height="48" rx="7" fill="url(#supmealGrad)"/>
+    <!-- lame (barre horizontale du L, en forme de couteau) -->
+    <path d="M0 48 L0 64 L58 54 L17 46 Z" fill="url(#supmealGrad)"/>
+    <!-- tranchant (reflet) -->
+    <path d="M4 55 L50 54.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+  </g>
+</svg>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semaine du 20 mai — SUPMEAL</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="main" style="max-width:1100px;margin:0 auto;padding:26px 24px 60px;">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <a href="planning-repas.html" class="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Retour
+      </a>
+    </div>
+  </div>
+
+  <div class="flex items-center" style="justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+    <h1 class="text-title2">Semaine du 20 mai</h1>
+    <div class="topbar-right">
+      <select class="input" style="width:120px;"><option>Semaine</option><option>Journée</option></select>
+      <button class="btn btn-primary" data-modal-open="modal-add-meal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Ajouter un repas
+      </button>
+    </div>
+  </div>
+
+  <div class="planning-table-wrap">
+    <table class="planning-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Lun 20/05</th><th>Mar 21/05</th><th>Mer 22/05</th><th>Jeu 23/05</th>
+          <th>Ven 24/05</th><th>Sam 25/05</th><th>Dim 26/05</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="row-label">Entrée</td>
+          <td><span class="meal-chip">Salade verte</span></td>
+          <td><span class="meal-chip">Soupe tomate</span></td>
+          <td><span class="meal-chip">Carottes râpées</span></td>
+          <td><span class="meal-chip">Avocat crevettes</span></td>
+          <td><span class="meal-chip">Concombre yaourt</span></td>
+          <td><span class="meal-chip">Salade quinoa</span></td>
+          <td><span class="meal-chip">Taboulé</span></td>
+        </tr>
+        <tr>
+          <td class="row-label">Plat</td>
+          <td><span class="meal-chip">Poulet curry</span></td>
+          <td><span class="meal-chip">Pâtes bolognaise</span></td>
+          <td><span class="meal-chip">Saumon grillé</span></td>
+          <td><span class="meal-chip">Chili con carne</span></td>
+          <td><span class="meal-chip">Pizza maison</span></td>
+          <td><span class="meal-chip">Wok légumes</span></td>
+          <td><span class="meal-chip">Rosbif</span></td>
+        </tr>
+        <tr>
+          <td class="row-label">Dessert</td>
+          <td><span class="meal-chip">Yaourt nature</span></td>
+          <td><span class="meal-chip">Compote</span></td>
+          <td><span class="meal-chip">Tarte aux pommes</span></td>
+          <td><span class="meal-chip">Mousse chocolat</span></td>
+          <td><span class="meal-chip">Fruits rouges</span></td>
+          <td><span class="meal-chip">Crème brûlée</span></td>
+          <td><span class="meal-chip">Glace vanille</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="planning-legend">
+    <div class="item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Recettes du cookbook uniquement
+    </div>
+    <div class="item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Importé depuis l'extérieur · Auteur : Marie Dupont (lecture seule)
+    </div>
+  </div>
+
+</div>
+
+<!-- Modale ajout d'un repas -->
+<div class="modal-overlay" id="modal-add-meal">
+  <div class="modal">
+    <div class="modal-head">
+      <p class="text-title3">Ajouter un repas</p>
+      <button class="modal-close" data-modal-close>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field">
+          <label>Jour</label>
+          <select class="input"><option>Lundi 20/05</option><option>Mardi 21/05</option><option>Mercredi 22/05</option></select>
+        </div>
+        <div class="field">
+          <label>Type</label>
+          <select class="input"><option>Entrée</option><option>Plat</option><option>Dessert</option></select>
+        </div>
+      </div>
+      <div class="field mb-0">
+        <label>Recette</label>
+        <select class="input">
+          <option>Salade quinoa (mon cookbook)</option>
+          <option>Saumon grillé (mon cookbook)</option>
+          <option>Importer une recette publique...</option>
+        </select>
+        <p class="hint">Seules les recettes de ce cookbook sont proposées, ou une recette publique externe (lecture seule).</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-modal-close>Annuler</button>
+      <button class="btn btn-primary" data-modal-close>Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

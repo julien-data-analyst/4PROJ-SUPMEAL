@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poulet curry — SUPMEAL</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="main" style="max-width:900px;margin:0 auto;padding:26px 24px 60px;">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <a href="mes-recettes.html" class="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Retour
+      </a>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Aperçu
+      </button>
+      <button class="btn-icon" data-modal-open="modal-delete" style="color:var(--error);border-color:#F3C6BF;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>
+      <button class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Enregistrer
+      </button>
+    </div>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <input class="recipe-meta-title" value="Poulet curry">
+    <div class="flex items-center gap-8">
+      <span class="badge badge-green">Personnel</span>
+      <span class="recipe-meta-sub">Dernière modification : il y a 2h</span>
+    </div>
+  </div>
+
+  <div class="editor-toolbar">
+    <select>
+      <option>Normal</option>
+      <option>Titre 1</option>
+      <option>Titre 2</option>
+      <option>Titre 3</option>
+    </select>
+    <div class="sep"></div>
+    <button title="Gras"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 0 8H6z"/><path d="M6 12h9a4 4 0 0 1 0 8H6z"/></svg></button>
+    <button title="Italique"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+    <div class="sep"></div>
+    <button title="Liste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+    <button title="Liste numérotée"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg></button>
+    <div class="sep"></div>
+    <button title="Citation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 0-1 1v0"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h1v0v2c0 1-1 2-2 2s-1 0-1 1v0"/></svg></button>
+  </div>
+
+  <div class="editor-body" contenteditable="true">
+    <h2>Ingrédients</h2>
+    <ul>
+      <li>500g de poulet</li>
+      <li>2 oignons</li>
+      <li>400ml de lait de coco</li>
+      <li>2 c. à soupe de curry</li>
+    </ul>
+    <h2>Étapes</h2>
+    <h3>1. Préparation</h3>
+    <p>Coupez le poulet en morceaux.</p>
+    <h3>2. Cuisson</h3>
+    <p>Faites revenir les oignons, ajoutez le poulet et le curry.</p>
+  </div>
+
+</div>
+
+<!-- Modale de suppression avec confirmation -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal">
+    <div class="modal-head">
+      <p class="text-title3">Supprimer la recette</p>
+      <button class="modal-close" data-modal-close>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="readonly-banner" style="background:var(--error-tint);color:#B23125;border-color:#F3C6BF;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Cette action est irréversible.
+      </div>
+      <div class="confirm-input-wrap">
+        <p class="hint">Pour confirmer, tapez <strong>suppression</strong> ci-dessous :</p>
+        <input class="input" data-confirm-delete-input="#confirm-delete-btn" placeholder="suppression">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-modal-close>Annuler</button>
+      <button class="btn btn-destructive" id="confirm-delete-btn" disabled>Supprimer la recette</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
