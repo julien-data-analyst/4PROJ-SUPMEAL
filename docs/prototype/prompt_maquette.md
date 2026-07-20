@@ -1,7 +1,7 @@
 Le prompt utilisé pour générer la maquette est le suivant :
 
 ```
-Je veux créer un template HTML sur une application de création de recette. Cette application permets aux personnes de créer leurs propres recettes personnelles et de soit les mettre dans des cookbooks (ou les créer directement dans celles-ci), soit de les publier en public auquel ils apparaîtront dans une page web tout publique pour les membres afin de partager leurs recettes. Les cookbooks sont un livre de recette personnel ou partagé avec d'autres personnes par un créateur en donnant différentes permissions (éditeur, commentateur, créateur, etc). Selon le profil, certaines actions sont omises et d'autres limitées. Des planning de repas peuvent être créer sur une journée ou une semaine afin de proposer différentes recettes d'entrées/plat et désert. 
+Je veux créer un template HTML sur une application de création de recette. Cette application permets aux personnes de créer leurs propres recettes personnelles et de soit les mettre dans des cookbooks (ou les créer directement dans celles-ci), soit de les publier en public auquel ils apparaîtront dans une page web tout publique pour les membres afin de partager leurs recettes. Les cookbooks sont un livre de recette personnel ou partagé avec d'autres personnes par un créateur en donnant différentes permissions (éditeur, commentateur, créateur, etc). Selon le profil, certaines actions sont omises et d'autres limitées. Des planning de repas peuvent être créer sur une journée ou une semaine afin de proposer différentes recettes d'entrées/plat et désert.
 
 En termes de pages web, j'aurais besoin :
 
@@ -18,7 +18,7 @@ Ce que je t'ai présenté sont les pages principales, maintenant les pages spéc
 
 - pour un cookbook : création, possibilité d'accéder à la conversation globale ou spécifique à un repas, une planification selon la permission. bouton de création de recette, symbole corbeille sur les recettes pour supprimer et ajouter un pop-up pour valider la suppression d'une recette si la permission le permet. bouton d'export pour exporter le cookbook en question avec ses propres recettes.
 
-- pour un planning : ajout des recettes disponibles dans l'emplacement où il se trouve, s'il est dans un cookbook, alors ce sont les recettes de ce cookbook et pas à l'extérieur, si c'est personnel, alors ce sont les recettes personnelles avec possibilité d'importer depuis l'extérieur un repas public impossible à modifier si j'en suis pas l'auteur et dont j'indique le profil de l'auteur qui l'a créé. 
+- pour un planning : ajout des recettes disponibles dans l'emplacement où il se trouve, s'il est dans un cookbook, alors ce sont les recettes de ce cookbook et pas à l'extérieur, si c'est personnel, alors ce sont les recettes personnelles avec possibilité d'importer depuis l'extérieur un repas public impossible à modifier si j'en suis pas l'auteur et dont j'indique le profil de l'auteur qui l'a créé.
 
 La charte graphique devra respecter les couleurs suivantes :
 - l'entreprise a une couleur verte RGB 84FA16 vers 2AC204 pour le plus foncé avec couleur classique rouge, jaune pour les erreurs et warning.
