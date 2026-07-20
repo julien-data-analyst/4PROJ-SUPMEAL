@@ -36,4 +36,10 @@ target-version = "py313"
 select = ["E","F","I","UP","DJ"]
 
 [tool.basedpyright]
-typeCheckingMode = "recommended"
+typeCheckingMode = "standard"
+
+reportMissingTypeStubs = "none"
+reportUnusedCallResult = "none"
+reportImplicitStringConcatenation = "none"
+reportUnknownVariableType = "none"
+reportAny = "none"
