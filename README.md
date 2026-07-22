@@ -102,7 +102,7 @@ docker compose -f docker-compose.prod.yml down
 
 ## 🌱 Development Workflow
 
-The `develop` branch is the main integration branch. 
+The `develop` branch is the main integration branch.
 Every new feature or bug fix must be developed in a dedicated branch before being merged into `develop`.
 
 ### Branch Naming Convention

@@ -2,27 +2,25 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-01-01",
 
   devtools: {
-    enabled: true
+    enabled: true,
   },
 
   modules: [
     "@pinia/nuxt",
     "@vueuse/nuxt",
     "@tailwindcss/postcss",
-    "@nuxt/eslint"
+    "@nuxt/eslint",
   ],
 
-  css: [
-    "~/assets/css/main.css"
-  ],
+  css: ["~/assets/css/main.css"],
 
   typescript: {
-    strict: true
+    strict: true,
   },
 
   runtimeConfig: {
     public: {
-      apiUrl: "http://localhost:8000/api"
-    }
-  }
-})
+      apiUrl: "http://localhost:8000/api",
+    },
+  },
+});

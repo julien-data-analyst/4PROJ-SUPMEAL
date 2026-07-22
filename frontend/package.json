@@ -1,7 +1,11 @@
 {
   "name": "recipe-front",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "postinstall": "nuxt prepare",
     "dev": "nuxt dev",
     "build": "nuxt build",
     "preview": "nuxt preview",
@@ -26,7 +30,8 @@
     "stylelint": "^16.26.1",
     "tailwindcss": "^4.3.2",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "vue-tsc": "^3.3.8"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.2"

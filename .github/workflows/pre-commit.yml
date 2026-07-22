@@ -1,0 +1,72 @@
+name: pre-commit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-path: backend/uv.lock
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --locked
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Cache pre-commit environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      # The local hooks in .pre-commit-config.yaml shell out to `docker compose exec`
+      # for dev-container parity, which isn't available on the runner. Here we run
+      # the file-hygiene hooks through pre-commit, and the project checks natively
+      # (same config files, same tool versions -> same result as in the containers).
+      - name: Run generic file-hygiene checks
+        run: uvx pre-commit run --all-files --hook-stage pre-commit
+        env:
+          SKIP: ruff-lint,ruff-format,eslint,prettier
+
+      - name: Ruff lint (backend)
+        working-directory: backend
+        run: uv run ruff check .
+
+      - name: Ruff format check (backend)
+        working-directory: backend
+        run: uv run ruff format --check .
+
+      - name: basedpyright (backend)
+        working-directory: backend
+        run: uv run basedpyright
+
+      - name: ESLint (frontend)
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Prettier check (frontend)
+        working-directory: frontend
+        run: npx prettier --check .
+
+      - name: Nuxt typecheck (frontend)
+        working-directory: frontend
+        run: npm run typecheck
