@@ -25,16 +25,24 @@ class SharedUserCookbook(models.Model):
 
     Maps the schema's ``shared_user_cookbook`` table. Uses a composite
     primary key on ``(cookbook, user)`` since a user can only be shared a
-    given cookbook once; ``role`` carries the permission level (e.g. viewer,
-    editor).
+    given cookbook once; ``role`` carries the permission level. The
+    cookbook's own creator is always an implicit "admin" and is never
+    represented as a row here - see ``cookbooks.permissions`` for the full
+    role/rank model.
     """
+
+    class Role(models.TextChoices):
+        CREATOR = "creator", "Creator"  # pyright: ignore[reportAssignmentType]
+        EDITOR = "editor", "Editor"  # pyright: ignore[reportAssignmentType]
+        COMMENTATOR = "commentator", "Commentator"  # pyright: ignore[reportAssignmentType]
+        READER = "reader", "Reader"  # pyright: ignore[reportAssignmentType]
 
     pk = models.CompositePrimaryKey("cookbook", "user")
     cookbook = models.ForeignKey(Cookbook, on_delete=models.PROTECT, related_name="shared_with")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="shared_cookbooks"
     )
-    role = models.CharField(max_length=50)
+    role = models.CharField(max_length=50, choices=Role.choices)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

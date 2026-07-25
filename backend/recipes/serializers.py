@@ -2,6 +2,7 @@ from django.db import transaction
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from cookbooks.permissions import has_rank
 from users.serializers import UserSerializer
 
 from .models import Ingredient, Recipe, RecipeIngredient, Step, Tag
@@ -146,10 +147,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         if cookbook is None:
             return cookbook
         user = self.context["request"].user
-        is_shared = cookbook.shared_with.filter(user=user).exists()
-        has_access = cookbook.creator_id == user.id or is_shared
-        if not has_access:
-            raise serializers.ValidationError("You do not have access to this cookbook.")
+        if not has_rank(user, cookbook, "creator"):
+            raise serializers.ValidationError(
+                "You do not have the required role (creator or admin) on this cookbook."
+            )
         return cookbook
 
     def create(self, validated_data: dict) -> Recipe:
