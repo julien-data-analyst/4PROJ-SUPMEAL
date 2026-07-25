@@ -72,6 +72,7 @@ erDiagram
         text title
         text image
         text source
+        numeric cooking_duration
         int creator_id FK
         int cookbook_id FK
         timestamp created_at
@@ -106,6 +107,7 @@ erDiagram
     ingredient {
         int id PK
         text name
+        text image
         timestamp created_at
         timestamp updated_at
     }
@@ -252,16 +254,17 @@ access to a given cookbook once.
 A recipe: title, optional source/image, and a creator. `cookbook_id` is
 nullable, since a recipe can exist before being filed into a cookbook.
 
-| Column         | Type      | Constraints | Note                    |
-| -------------- | --------- | ----------- | ------------------------ |
-| `id`           | INTEGER   | PK          |                          |
-| `title`        | TEXT      | not null    |                          |
-| `image`        | TEXT      | null        |                          |
-| `source`       | TEXT      | null        |                          |
-| `creator_id`   | INTEGER   | not null    | → `user.id`              |
-| `cookbook_id`  | INTEGER   | null        | → `cookbook.id`          |
-| `created_at`   | TIMESTAMP | not null    |                          |
-| `updated_at`   | TIMESTAMP | not null    |                          |
+| Column              | Type      | Constraints | Note                    |
+| ------------------- | --------- | ----------- | ------------------------ |
+| `id`                | INTEGER   | PK          |                          |
+| `title`             | TEXT      | not null    |                          |
+| `image`             | TEXT      | null        |                          |
+| `source`            | TEXT      | null        |                          |
+| `cooking_duration`  | NUMERIC   | null        | e.g. minutes             |
+| `creator_id`        | INTEGER   | not null    | → `user.id`              |
+| `cookbook_id`       | INTEGER   | null        | → `cookbook.id`          |
+| `created_at`        | TIMESTAMP | not null    |                          |
+| `updated_at`        | TIMESTAMP | not null    |                          |
 
 #### `step`
 
@@ -287,6 +290,7 @@ quantity used in a specific recipe is not stored here.
 | ------------- | --------- | ----------- | ---- |
 | `id`          | INTEGER   | PK          |      |
 | `name`        | TEXT      | not null    |      |
+| `image`       | TEXT      | null        |      |
 | `created_at`  | TIMESTAMP | not null    |      |
 | `updated_at`  | TIMESTAMP | not null    |      |
 
