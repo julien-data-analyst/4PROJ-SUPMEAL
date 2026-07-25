@@ -109,9 +109,7 @@ def test_microsoft_oauth_without_photo_leaves_profile_icon_empty(api_client: API
     assert oauth_account.profile_icon == ""
 
 
-def test_microsoft_oauth_links_to_existing_user_by_email(
-    api_client: APIClient, make_user
-):
+def test_microsoft_oauth_links_to_existing_user_by_email(api_client: APIClient, make_user):
     """A Microsoft login matching an existing account's email links it instead of duplicating it."""
     existing_user = make_user(username="janedoe", email="jane.doe@contoso.com")
     url = reverse("oauth-microsoft")
