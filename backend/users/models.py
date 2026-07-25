@@ -14,7 +14,7 @@ class User(AbstractUser):
     """
 
     email = models.EmailField(unique=True)
-    profile_icon = models.TextField()
+    profile_icon = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
