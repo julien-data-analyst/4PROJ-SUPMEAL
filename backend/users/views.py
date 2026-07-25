@@ -7,8 +7,19 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User
+from .oauth_microsoft import (
+    MicrosoftOAuthError,
+    exchange_code_for_token,
+    fetch_microsoft_profile,
+    get_or_create_user_from_microsoft,
+)
 from .permissions import IsSelfOrStaff
-from .serializers import LoginSerializer, UserRegisterSerializer, UserSerializer
+from .serializers import (
+    LoginSerializer,
+    MicrosoftOAuthSerializer,
+    UserRegisterSerializer,
+    UserSerializer,
+)
 
 
 def _tokens_for(user: User) -> dict:
@@ -44,6 +55,28 @@ class LoginView(APIView):
         user = serializer.validated_data[  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
             "user"
         ]
+        return Response({"user": UserSerializer(user).data, **_tokens_for(user)})
+
+
+class MicrosoftOAuthView(APIView):
+    """Exchanges a Microsoft authorization code for a Graph profile and logs the user in."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request: Request) -> Response:
+        serializer = MicrosoftOAuthSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            code = serializer.validated_data[  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
+                "code"
+            ]
+            access_token = exchange_code_for_token(code)
+            profile = fetch_microsoft_profile(access_token)
+            user, _created = get_or_create_user_from_microsoft(profile, access_token)
+        except MicrosoftOAuthError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({"user": UserSerializer(user).data, **_tokens_for(user)})
 
 
