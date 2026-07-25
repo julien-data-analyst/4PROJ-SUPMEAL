@@ -14,7 +14,7 @@ class User(AbstractUser):
     """
 
     email = models.EmailField(unique=True)
-    profile_icon = models.TextField()
+    profile_icon = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -34,9 +34,7 @@ class OAuthUser(models.Model):
     provider_url = models.URLField(max_length=255)
     profile_icon = models.TextField(blank=True, null=True)  # noqa: DJ001 (nullable in schema)
     domain = models.CharField(max_length=255)
-    user = models.ForeignKey(
-        User, on_delete=models.PROTECT, related_name="oauth_accounts"
-    )
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="oauth_accounts")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

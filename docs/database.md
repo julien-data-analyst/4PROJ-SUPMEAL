@@ -25,7 +25,7 @@ migrations day to day.
 ## Part 1 - Database
 
 ### Overview
-
+￼
 - **Database system:** PostgreSQL 16 (see `docker-compose.dev.yml`, service
   `postgres`)
 - **Domain:** a recipe/cookbook manager - users write recipes, organize
@@ -199,7 +199,8 @@ The account of a person using the app. Every other table that has a
 | `firstname`     | TEXT      | not null    |                                  |
 | `lastname`      | TEXT      | not null    |                                  |
 | `email`         | TEXT      | not null    |                                  |
-| `profile_icon`  | TEXT      | not null    |                                  |
+| `password`      | TEXT      | not null    | hashed password (Django's `AbstractUser` provides this) |
+| `profile_icon`  | TEXT      | not null, default `''` | optional; empty string when not provided |
 | `created_at`    | TIMESTAMP | not null    |                                  |
 | `updated_at`    | TIMESTAMP | not null    |                                  |
 
@@ -341,7 +342,7 @@ personalize recommendations). Composite primary key.
 | `created_at`  | TIMESTAMP | not null    |              |
 
 #### `planning`
-
+a corrigé le retour à la ligne manquant en fin de .env.example, et git log confirme que le commit 29137a3
 A named meal plan created by a user, optionally scoped to a cookbook.
 
 | Column         | Type      | Constraints | Note              |
@@ -414,7 +415,7 @@ else in the project - this matters for migrations, see
 
 | SQL table               | Django app  | Model               | Actual DB table                |
 | ------------------------ | ----------- | -------------------- | -------------------------------- |
-| `user`                   | `users`     | `User`                | `users_user`                     |
+| `user`                   | `users`    a corrigé le retour à la ligne manquant en fin de .env.example, et git log confirme que le commit 29137a3 | `User`                | `users_user`                     |
 | `OAuth_user`              | `users`     | `OAuthUser`           | `users_oauthuser`                 |
 | `cookbook`                | `cookbooks` | `Cookbook`            | `cookbooks_cookbook`              |
 | `shared_user_cookbook`    | `cookbooks` | `SharedUserCookbook`  | `cookbooks_sharedusercookbook`    |
