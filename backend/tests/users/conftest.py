@@ -26,6 +26,9 @@ class APIClient(_APIClient):
     def post(self, *args: Any, **kwargs: Any) -> Response:
         return super().post(*args, **kwargs)  # pyright: ignore[reportReturnType]
 
+    def put(self, *args: Any, **kwargs: Any) -> Response:
+        return super().put(*args, **kwargs)  # pyright: ignore[reportReturnType]
+
     def patch(self, *args: Any, **kwargs: Any) -> Response:
         return super().patch(*args, **kwargs)  # pyright: ignore[reportReturnType]
 

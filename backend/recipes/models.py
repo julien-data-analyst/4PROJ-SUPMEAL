@@ -12,6 +12,7 @@ class Ingredient(models.Model):
     """
 
     name = models.CharField(max_length=255)
+    image = models.TextField(blank=True, null=True)  # noqa: DJ001 (nullable, optional)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -48,6 +49,7 @@ class Recipe(models.Model):
     title = models.CharField(max_length=255)
     image = models.TextField(blank=True, null=True)  # noqa: DJ001 (nullable in schema)
     source = models.TextField(blank=True, null=True)  # noqa: DJ001 (nullable in schema)
+    cooking_duration = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="recipes"
     )
