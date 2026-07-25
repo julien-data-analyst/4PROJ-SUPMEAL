@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS "user" (
 	"created_at" TIMESTAMP NOT NULL,
 	"updated_at" TIMESTAMP NOT NULL,
 	"profile_icon" TEXT NOT NULL,
+	"password" TEXT NOT NULL,
 	"email" TEXT NOT NULL,
 	PRIMARY KEY("id")
 );
