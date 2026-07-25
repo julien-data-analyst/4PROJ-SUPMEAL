@@ -96,10 +96,12 @@ def cookbook_shared_with_regular_user(
     other_user: User,  # noqa: F811
     regular_user: User,  # noqa: F811
 ) -> Cookbook:
-    """A cookbook created by ``other_user`` and shared with ``regular_user``."""
+    """A cookbook created by ``other_user`` and shared with ``regular_user`` at
+    the "creator" role, i.e. with enough rights to schedule new plannings into it.
+    """
     cookbook = Cookbook(name="Carnet de Bob", creator=other_user)
     cookbook.save()
-    SharedUserCookbook(cookbook=cookbook, user=regular_user, role="editor").save()
+    SharedUserCookbook(cookbook=cookbook, user=regular_user, role="creator").save()
     return cookbook
 
 
