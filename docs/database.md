@@ -172,8 +172,9 @@ erDiagram
     }
 
     recipe_planning {
-        int recipe_id PK,FK
-        int planning_id PK,FK
+        int id PK
+        int recipe_id FK
+        int planning_id FK
         text type
         text lunch
         text dayofweek
@@ -360,13 +361,19 @@ A named meal plan created by a user, optionally scoped to a cookbook.
 
 #### `recipe_planning`
 
-Join table scheduling a `recipe` within a `planning` (which meal, which
-day). Composite primary key.
+Schedules a `recipe` within a `planning`, for a given day/meal/course slot.
+Unlike this schema's other join tables, it uses a surrogate `id` rather
+than a composite primary key: the same recipe can be scheduled more than
+once in a planning (e.g. the same dessert on several days), so
+`(recipe_id, planning_id)` can't be the key on its own. Instead, a unique
+constraint on `(planning_id, dayofweek, lunch, type)` keeps at most one
+recipe per day/meal-moment/course slot.
 
 | Column          | Type      | Constraints | Note                  |
 | --------------- | --------- | ----------- | ---------------------- |
-| `recipe_id`     | INTEGER   | PK          | → `recipe.id`           |
-| `planning_id`   | INTEGER   | PK          | → `planning.id`         |
+| `id`            | INTEGER   | PK          |                        |
+| `recipe_id`     | INTEGER   | not null    | → `recipe.id`           |
+| `planning_id`   | INTEGER   | not null    | → `planning.id`         |
 | `type`          | TEXT      | not null    |                        |
 | `lunch`         | TEXT      | not null    |                        |
 | `dayofweek`     | TEXT      | null        |                        |
@@ -464,11 +471,11 @@ reference.
 
 ### Composite primary keys
 
-Every SQL join table (`recipe_tag`, `recipe_ingredient`,
-`shared_user_cookbook`, `recipe_planning`, `user_preferences`) uses a
-*composite* primary key (e.g. `(recipe_id, tag_id)`) rather than a
-surrogate `id`. This is implemented with Django 6's native
-`models.CompositePrimaryKey`, introduced specifically for this use case:
+Most SQL join tables (`recipe_tag`, `recipe_ingredient`,
+`shared_user_cookbook`, `user_preferences`) use a *composite* primary key
+(e.g. `(recipe_id, tag_id)`) rather than a surrogate `id`. This is
+implemented with Django 6's native `models.CompositePrimaryKey`,
+introduced specifically for this use case:
 
 ```python
 class RecipeTag(models.Model):
@@ -483,9 +490,10 @@ not the DB column names (`recipe_id`, `tag_id`).
 
 One limitation: **the Django admin cannot register a model with a
 composite primary key yet**. That's why `RecipeTag`, `RecipeIngredient`,
-`SharedUserCookbook`, `RecipePlanning` and `UserPreference` are not
-registered in their app's `admin.py` (see the comment at the top of each
-file).
+`SharedUserCookbook` and `UserPreference` are not registered in their
+app's `admin.py` (see the comment at the top of each file).
+`RecipePlanning` is exempt since it uses a surrogate `id` instead - see
+its [table description](#recipe_planning) above for why.
 
 ### Running migrations
 
