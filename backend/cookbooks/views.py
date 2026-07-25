@@ -25,10 +25,12 @@ from .serializers import (
         responses=CookbookSerializer,
         description=(
             "Grant or change one or more users' access to this cookbook in a single call. "
-            "Admin-only (the cookbook's creator, or staff) - see "
-            "`cookbooks.permissions.IsCookbookAdmin`. Re-sharing with a user who already "
-            "has access **updates their role** rather than creating a duplicate entry. "
-            "Returns the cookbook with its up-to-date `shared_with` list."
+            "Accepts both `POST` (grant) and `PATCH` (change an existing role) - both do "
+            "the same upsert, so either works for either case. Admin-only (the cookbook's "
+            "creator, or staff) - see `cookbooks.permissions.IsCookbookAdmin`. Re-sharing "
+            "with a user who already has access **updates their role** rather than "
+            "creating a duplicate entry. Returns the cookbook with its up-to-date "
+            "`shared_with` list."
         ),
         examples=[
             OpenApiExample(
@@ -96,11 +98,13 @@ from .serializers import (
 class CookbookViewSet(viewsets.ModelViewSet):
     """CRUD for cookbooks, plus ``share``/``unshare`` to grant/revoke access.
 
-    Both are POST actions (a DELETE can't carry a documented JSON body in
-    OpenAPI/drf-spectacular, so ``unshare`` is its own endpoint rather than a
-    DELETE on ``share``). Only cookbooks the caller created or was shared
-    belong in ``get_queryset``, so a non-member gets a 404 rather than a 403
-    on retrieve. Renaming, deleting, sharing and unsharing a cookbook are
+    ``share`` accepts both POST and PATCH (identical upsert behaviour -
+    PATCH just reads better when changing an existing role). ``unshare`` is
+    POST-only, kept as its own endpoint rather than a DELETE on ``share``
+    since DELETE can't carry a documented JSON body in OpenAPI/
+    drf-spectacular. Only cookbooks the caller created or was shared belong
+    in ``get_queryset``, so a non-member gets a 404 rather than a 403 on
+    retrieve. Renaming, deleting, sharing and unsharing a cookbook are
     admin-only (the cookbook's creator, or staff) - see
     ``cookbooks.permissions.IsCookbookAdmin``.
     """
@@ -142,7 +146,7 @@ class CookbookViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer: CookbookWriteSerializer) -> None:
         serializer.save(creator=self.request.user)
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post", "patch"])
     def share(self, request: Request, pk=None) -> Response:
         cookbook = self.get_object()
         serializer = CookbookShareSerializer(data=request.data, context={"cookbook": cookbook})

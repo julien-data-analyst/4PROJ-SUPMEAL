@@ -62,6 +62,25 @@ def test_resharing_updates_role_instead_of_duplicating(
     assert shares.get().role == "editor"
 
 
+def test_admin_can_change_a_users_role_via_patch(
+    auth_client: APIClient, owned_cookbook: Cookbook, other_user: User
+):
+    """Test that PATCH on the share route changes an existing role, same as POST."""
+    url = reverse("cookbook-share", kwargs={"pk": owned_cookbook.pk})
+    auth_client.post(url, {"shares": [{"user": other_user.pk, "role": "reader"}]}, format="json")
+
+    response = auth_client.patch(
+        url, {"shares": [{"user": other_user.pk, "role": "editor"}]}, format="json"
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    shares = SharedUserCookbook.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        cookbook=owned_cookbook, user=other_user
+    )
+    assert shares.count() == 1
+    assert shares.get().role == "editor"
+
+
 def test_sharing_with_invalid_role_is_rejected(
     auth_client: APIClient, owned_cookbook: Cookbook, other_user: User
 ):
@@ -142,9 +161,7 @@ def test_admin_can_unshare_one_or_more_users(
     )
     unshare_url = reverse("cookbook-unshare", kwargs={"pk": owned_cookbook.pk})
 
-    response = auth_client.post(
-        unshare_url, {"users": [other_user.pk, stranger.pk]}, format="json"
-    )
+    response = auth_client.post(unshare_url, {"users": [other_user.pk, stranger.pk]}, format="json")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.data is not None
