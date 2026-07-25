@@ -170,7 +170,8 @@ class CookbookViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         SharedUserCookbook.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
-            cookbook=cookbook, user__in=serializer.validated_data["users"]  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
+            cookbook=cookbook,
+            user__in=serializer.validated_data["users"],  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
         ).delete()
 
         cookbook.refresh_from_db()
