@@ -46,6 +46,10 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+class MicrosoftOAuthSerializer(serializers.Serializer):
+    code = serializers.CharField()
+
+
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, trim_whitespace=False)

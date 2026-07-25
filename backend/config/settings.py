@@ -86,6 +86,15 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
+AZURE_CLIENT_ID = env("AZURE_CLIENT_ID", default="")  # pyright: ignore[reportArgumentType]
+AZURE_TENANT_ID = env("AZURE_TENANT_ID", default="")  # pyright: ignore[reportArgumentType]
+AZURE_CLIENT_SECRET = env("AZURE_CLIENT_SECRET", default="")  # pyright: ignore[reportArgumentType]
+AZURE_REDIRECT_URI = env("AZURE_REDIRECT_URI", default="")  # pyright: ignore[reportArgumentType]
+AZURE_AUTHORITY = env(
+    "AZURE_AUTHORITY",
+    default="https://login.microsoftonline.com/common/v2.0",  # pyright: ignore[reportArgumentType]
+)
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
