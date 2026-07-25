@@ -45,9 +45,7 @@ def test_owner_can_create_planning_without_optional_meals(auth_client: APIClient
     assert response.data["meals"] == []
 
 
-def test_owner_can_schedule_a_full_day_of_six_meals(
-    auth_client: APIClient, regular_user: User
-):
+def test_owner_can_schedule_a_full_day_of_six_meals(auth_client: APIClient, regular_user: User):
     """Test that a single day can hold up to 6 recipes (2 moments x 3 courses)."""
     recipes = [Recipe.objects.create(title=f"Recette {i}", creator=regular_user) for i in range(6)]  # pyright: ignore[reportAttributeAccessIssue]
     url = reverse("planning-list")
@@ -82,9 +80,12 @@ def test_owner_can_schedule_the_same_recipe_on_several_days(
     assert response.status_code == status.HTTP_201_CREATED
     assert response.data is not None
     assert len(response.data["meals"]) == 2
-    assert RecipePlanning.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
-        recipe=entree_recipe
-    ).count() == 2
+    assert (
+        RecipePlanning.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+            recipe=entree_recipe
+        ).count()
+        == 2
+    )
 
 
 def test_creating_planning_rejects_two_recipes_in_the_same_slot(
