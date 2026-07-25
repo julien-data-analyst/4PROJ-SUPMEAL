@@ -18,6 +18,7 @@ def _tokens_for(user: User) -> dict:
 
 class RegisterView(generics.CreateAPIView):
     """View for user registration."""
+
     queryset = User.objects.all()
     serializer_class = UserRegisterSerializer
     permission_classes = [AllowAny]
@@ -34,12 +35,15 @@ class RegisterView(generics.CreateAPIView):
 
 class LoginView(APIView):
     """View for user login."""
+
     permission_classes = [AllowAny]
 
     def post(self, request: Request) -> Response:
         serializer = LoginSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data["user"]
+        user = serializer.validated_data[  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
+            "user"
+        ]
         return Response({"user": UserSerializer(user).data, **_tokens_for(user)})
 
 
@@ -51,6 +55,7 @@ class UserViewSet(
     viewsets.GenericViewSet,
 ):
     """ViewSet for managing users."""
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]

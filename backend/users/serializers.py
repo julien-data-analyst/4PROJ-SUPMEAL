@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from .models import User
@@ -52,7 +53,7 @@ class LoginSerializer(serializers.Serializer):
     def validate(self, attrs: dict) -> dict:
         try:
             user_obj = User.objects.get(email=attrs["email"])
-        except User.DoesNotExist:
+        except ObjectDoesNotExist:
             raise serializers.ValidationError("Invalid email or password.")
 
         user = authenticate(
