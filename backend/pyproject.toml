@@ -31,12 +31,14 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+extend-exclude = ["*/migrations/*.py"]
 
 [tool.ruff.lint]
 select = ["E","F","I","UP","DJ"]
 
 [tool.basedpyright]
 typeCheckingMode = "standard"
+exclude = ["**/migrations/*.py", ".venv"]
 
 reportMissingTypeStubs = "none"
 reportUnusedCallResult = "none"
