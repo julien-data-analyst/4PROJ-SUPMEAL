@@ -1,12 +1,13 @@
-from django.db import transaction
+from django.db import models, transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated
 
+from cookbooks.permissions import CookbookItemPermission
+
 from .models import Ingredient, Recipe, Tag
-from .permissions import IsCreatorOrStaff
 from .serializers import (
     IngredientSerializer,
     RecipeSerializer,
@@ -30,10 +31,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
     nested ``RecipeSerializer`` shape, including for create/update.
     """
 
-    queryset = Recipe.objects.select_related(  # pyright: ignore[reportAttributeAccessIssue]
-        "creator", "cookbook"
-    ).prefetch_related("recipe_ingredients__ingredient", "recipe_tags__tag", "steps")
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):  # pyright: ignore[reportIncompatibleMethodOverride]
+        user = self.request.user
+        return (
+            Recipe.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+                models.Q(cookbook__isnull=True)  # pyright: ignore[reportOperatorIssue]
+                | models.Q(creator=user)
+                | models.Q(cookbook__creator=user)
+                | models.Q(cookbook__shared_with__user=user)
+            )
+            .select_related("creator", "cookbook")
+            .prefetch_related("recipe_ingredients__ingredient", "recipe_tags__tag", "steps")
+            .distinct()
+        )
 
     def get_serializer_class(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         if self.action in ("create", "update", "partial_update"):
@@ -41,8 +53,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return RecipeSerializer
 
     def get_permissions(self):
-        if self.action in ("update", "partial_update", "destroy"):
-            return [IsAuthenticated(), IsCreatorOrStaff()]
+        if self.action in ("retrieve", "update", "partial_update", "destroy"):
+            return [IsAuthenticated(), CookbookItemPermission()]
         return super().get_permissions()
 
     def perform_destroy(self, instance: Recipe) -> None:
