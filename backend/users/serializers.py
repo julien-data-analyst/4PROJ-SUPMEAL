@@ -50,6 +50,22 @@ class MicrosoftOAuthSerializer(serializers.Serializer):
     code = serializers.CharField()
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate(self, attrs: dict) -> dict:
+        user = self.context["request"].user
+
+        if user.oauth_accounts.exists():
+            raise serializers.ValidationError("OAuth accounts cannot change their password here.")
+
+        if not user.check_password(attrs["current_password"]):
+            raise serializers.ValidationError("Current password is incorrect.")
+
+        return attrs
+
+
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, trim_whitespace=False)

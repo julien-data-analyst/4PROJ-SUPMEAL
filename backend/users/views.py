@@ -15,6 +15,7 @@ from .oauth_microsoft import (
 )
 from .permissions import IsSelfOrStaff
 from .serializers import (
+    ChangePasswordSerializer,
     LoginSerializer,
     MicrosoftOAuthSerializer,
     UserRegisterSerializer,
@@ -78,6 +79,28 @@ class MicrosoftOAuthView(APIView):
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"user": UserSerializer(user).data, **_tokens_for(user)})
+
+
+class ChangePasswordView(APIView):
+    """View for changing the authenticated user's own password.
+
+    Rejected for accounts that only have linked OAuth identities, since they
+    have no local password to confirm/replace.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request) -> Response:
+        serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        request.user.set_password(
+            serializer.validated_data[  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
+                "new_password"
+            ]
+        )
+        request.user.save()
+        return Response({"detail": "Password updated successfully."})
 
 
 class UserViewSet(
