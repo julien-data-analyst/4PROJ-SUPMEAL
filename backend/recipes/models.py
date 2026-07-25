@@ -74,9 +74,7 @@ class RecipeIngredient(models.Model):
     """
 
     pk = models.CompositePrimaryKey("recipe", "ingredient")
-    recipe = models.ForeignKey(
-        Recipe, on_delete=models.PROTECT, related_name="recipe_ingredients"
-    )
+    recipe = models.ForeignKey(Recipe, on_delete=models.PROTECT, related_name="recipe_ingredients")
     ingredient = models.ForeignKey(
         Ingredient, on_delete=models.PROTECT, related_name="recipe_ingredients"
     )

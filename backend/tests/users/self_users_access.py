@@ -1,8 +1,8 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APIClient
 
+from tests.users.conftest import APIClient
 from users.models import User
 
 pytestmark = pytest.mark.django_db
@@ -10,6 +10,7 @@ pytestmark = pytest.mark.django_db
 #############################################-
 # Tests for user registration, login, and profile access
 #############################################-
+
 
 def test_register_creates_user_with_hashed_password(api_client: APIClient):
     """Test that registering a new user creates a user with a hashed password and returns tokens."""
@@ -25,6 +26,7 @@ def test_register_creates_user_with_hashed_password(api_client: APIClient):
     response = api_client.post(url, payload, format="json")
 
     assert response.status_code == status.HTTP_201_CREATED
+    assert response.data is not None
     assert "password" not in response.data["user"]
     assert "access" in response.data
     assert "refresh" in response.data
@@ -36,7 +38,7 @@ def test_register_creates_user_with_hashed_password(api_client: APIClient):
 
 
 def test_register_without_profile_icon_defaults_to_empty(api_client: APIClient):
-    """Test that registering a user without a profile icon sets the profile_icon field to an empty string."""
+    """Test that registering without a profile icon defaults profile_icon to an empty string."""
     url = reverse("user-register")
     payload = {
         "username": "iconless",
@@ -49,6 +51,7 @@ def test_register_without_profile_icon_defaults_to_empty(api_client: APIClient):
     response = api_client.post(url, payload, format="json")
 
     assert response.status_code == status.HTTP_201_CREATED
+    assert response.data is not None
     assert response.data["user"]["profile_icon"] == ""
 
 
@@ -63,6 +66,7 @@ def test_login_with_correct_credentials_returns_tokens(
     )
 
     assert response.status_code == status.HTTP_200_OK
+    assert response.data is not None
     assert response.data["user"]["username"] == regular_user.username
     assert "access" in response.data
     assert "refresh" in response.data
@@ -104,7 +108,8 @@ def test_me_returns_own_profile(auth_client: APIClient, regular_user: User):
     response = auth_client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.data["id"] == regular_user.id
+    assert response.data is not None
+    assert response.data["id"] == regular_user.pk
     assert response.data["email"] == regular_user.email
 
 

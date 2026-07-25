@@ -30,9 +30,7 @@ class SharedUserCookbook(models.Model):
     """
 
     pk = models.CompositePrimaryKey("cookbook", "user")
-    cookbook = models.ForeignKey(
-        Cookbook, on_delete=models.PROTECT, related_name="shared_with"
-    )
+    cookbook = models.ForeignKey(Cookbook, on_delete=models.PROTECT, related_name="shared_with")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="shared_cookbooks"
     )
