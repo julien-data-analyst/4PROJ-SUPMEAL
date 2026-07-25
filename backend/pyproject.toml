@@ -30,7 +30,7 @@ dev = [
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
-python_files = ["test_*.py", "*_test.py", "*_access.py"]
+python_files = ["test_*.py", "*_test.py", "*_access.py", "*_cookbooks.py"]
 
 [tool.ruff]
 line-length = 100
