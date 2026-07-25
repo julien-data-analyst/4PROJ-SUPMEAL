@@ -12,20 +12,35 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 
+import environ
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env()
+
+# Locally (outside Docker) the .env file lives at the repo root, one level
+# above backend/. Inside the backend container only ./backend is mounted, so
+# this path won't exist there - env vars are already injected via env_file
+# in docker-compose.dev.yml, so reading the file is skipped.
+_root_env_file = BASE_DIR.parent / ".env"
+if _root_env_file.exists():
+    environ.Env.read_env(_root_env_file)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure--sqbtuj0p5cfixglfus-jsyuiw=7oc+%%c=1x2ly4l@cjdx440"
+SECRET_KEY = env(
+    "SECRET_KEY",
+    default="django-insecure--sqbtuj0p5cfixglfus-jsyuiw=7oc+%%c=1x2ly4l@cjdx440",  # pyright: ignore[reportArgumentType]
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool("DEBUG", default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])  # pyright: ignore[reportArgumentType]
 
 
 # Application definition
@@ -37,7 +52,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "users",
+    "cookbooks",
+    "recipes",
+    "planning",
+    "messaging",
 ]
+
+AUTH_USER_MODEL = "users.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -74,8 +96,12 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("DATABASE_NAME"),
+        "USER": env("DATABASE_USER"),
+        "PASSWORD": env("DATABASE_PASSWORD"),
+        "HOST": env("DATABASE_HOST"),
+        "PORT": env("DATABASE_PORT"),
     }
 }
 
