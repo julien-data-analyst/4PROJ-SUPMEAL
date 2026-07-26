@@ -1,5 +1,7 @@
 # Database
 
+🇬🇧 English | [🇫🇷 Français](database.fr.md)
+
 ## Summary
 
 - [Part 1 - Database](#part-1---database)
@@ -382,8 +384,10 @@ recipe per day/meal-moment/course slot.
 
 #### `message`
 
-A chat message posted by a user, always tied to both a cookbook and a
-recipe (the conversation context).
+A chat message posted by a user, always tied to a cookbook. `recipe_id` is
+nullable: a message with no `recipe_id` belongs to the cookbook's global
+channel, while one with a `recipe_id` set belongs to that specific
+recipe's channel (that recipe must itself be filed into `cookbook_id`).
 
 | Column         | Type      | Constraints | Note            |
 | -------------- | --------- | ----------- | ---------------- |
@@ -392,7 +396,7 @@ recipe (the conversation context).
 | `canal`        | TEXT      | not null    | conversation channel |
 | `author_id`    | INTEGER   | not null    | → `user.id`       |
 | `cookbook_id`  | INTEGER   | not null    | → `cookbook.id`   |
-| `recipe_id`    | INTEGER   | not null    | → `recipe.id`     |
+| `recipe_id`    | INTEGER   | null        | → `recipe.id`     |
 | `created_at`   | TIMESTAMP | not null    |                  |
 
 All foreign keys are declared `ON UPDATE NO ACTION ON DELETE NO ACTION` in
@@ -426,7 +430,7 @@ else in the project - this matters for migrations, see
 
 | SQL table               | Django app  | Model               | Actual DB table                |
 | ------------------------ | ----------- | -------------------- | -------------------------------- |
-| `user`                   | `users`    a corrigé le retour à la ligne manquant en fin de .env.example, et git log confirme que le commit 29137a3 | `User`                | `users_user`                     |
+| `user`                   | `users`     | `User`                | `users_user`                     |
 | `OAuth_user`              | `users`     | `OAuthUser`           | `users_oauthuser`                 |
 | `cookbook`                | `cookbooks` | `Cookbook`            | `cookbooks_cookbook`              |
 | `shared_user_cookbook`    | `cookbooks` | `SharedUserCookbook`  | `cookbooks_sharedusercookbook`    |
