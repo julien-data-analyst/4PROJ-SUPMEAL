@@ -6,6 +6,7 @@ from cookbooks.permissions import has_rank
 from users.serializers import UserSerializer
 
 from .models import Ingredient, Recipe, RecipeIngredient, Step, Tag
+from .services import sync_recipe_ingredients, sync_recipe_steps, sync_recipe_tags
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -163,9 +164,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             recipe = Recipe.objects.create(  # pyright: ignore[reportAttributeAccessIssue]
                 creator=request.user, **validated_data
             )
-            self._sync_ingredients(recipe, ingredients_data)
-            self._sync_tags(recipe, tags_data)
-            self._sync_steps(recipe, steps_data)
+            sync_recipe_ingredients(recipe, ingredients_data)
+            sync_recipe_tags(recipe, tags_data)
+            sync_recipe_steps(recipe, steps_data)
         return recipe
 
     def update(self, instance: Recipe, validated_data: dict) -> Recipe:
@@ -176,57 +177,12 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
             instance = super().update(instance, validated_data)
             if ingredients_data is not None:
-                self._sync_ingredients(instance, ingredients_data)
+                sync_recipe_ingredients(instance, ingredients_data)
             if tags_data is not None:
-                self._sync_tags(instance, tags_data)
+                sync_recipe_tags(instance, tags_data)
             if steps_data is not None:
-                self._sync_steps(instance, steps_data)
+                sync_recipe_steps(instance, steps_data)
         return instance
-
-    @staticmethod
-    def _get_or_create_ingredient(name: str, image: str | None) -> Ingredient:
-        ingredient = Ingredient.objects.filter(name__iexact=name).first()  # pyright: ignore[reportAttributeAccessIssue]
-        if ingredient is None:
-            ingredient = Ingredient.objects.create(  # pyright: ignore[reportAttributeAccessIssue]
-                name=name, image=image
-            )
-        return ingredient
-
-    @classmethod
-    def _sync_ingredients(cls, recipe: Recipe, items: list[dict]) -> None:
-        recipe.recipe_ingredients.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
-        for item in items:
-            ingredient = cls._get_or_create_ingredient(item["name"], item.get("image"))
-            RecipeIngredient.objects.create(  # pyright: ignore[reportAttributeAccessIssue]
-                recipe=recipe,
-                ingredient=ingredient,
-                quantity=item["quantity"],
-                unity=item.get("unity"),
-                person_numbers=item["person_numbers"],
-            )
-
-    @staticmethod
-    def _get_or_create_tag(name: str, tag_type: str, description: str | None) -> Tag:
-        tag = Tag.objects.filter(name__iexact=name).first()  # pyright: ignore[reportAttributeAccessIssue]
-        if tag is None:
-            tag = Tag.objects.create(  # pyright: ignore[reportAttributeAccessIssue]
-                name=name, type=tag_type, description=description
-            )
-        return tag
-
-    @classmethod
-    def _sync_tags(cls, recipe: Recipe, items: list[dict]) -> None:
-        recipe.recipe_tags.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
-        for item in items:
-            tag = cls._get_or_create_tag(item["name"], item["type"], item.get("description"))
-            recipe.recipe_tags.create(tag=tag)  # pyright: ignore[reportAttributeAccessIssue]
-
-    @staticmethod
-    def _sync_steps(recipe: Recipe, items: list[dict]) -> None:
-        recipe.steps.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
-        Step.objects.bulk_create(  # pyright: ignore[reportAttributeAccessIssue]
-            Step(recipe=recipe, **item) for item in items
-        )
 
     def to_representation(self, instance: Recipe):  # pyright: ignore[reportIncompatibleMethodOverride]
         return RecipeSerializer(instance, context=self.context).data

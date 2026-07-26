@@ -1,11 +1,14 @@
 from django.db import models, transaction
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from .export import CookbookExportSerializer, export_cookbook, export_cookbooks
+from .imports import import_cookbooks
 from .models import Cookbook, SharedUserCookbook
 from .permissions import IsCookbookAdmin
 from .serializers import (
@@ -14,6 +17,47 @@ from .serializers import (
     CookbookUnshareSerializer,
     CookbookWriteSerializer,
 )
+
+COOKBOOK_EXPORT_EXAMPLE = {
+    "name": "Recettes de famille",
+    "recipes": [
+        {
+            "id": 12,
+            "title": "Crepes",
+            "image": None,
+            "source": "https://example.com/crepes",
+            "cooking_duration": "15.50",
+            "created_at": "2026-07-20T09:00:00Z",
+            "updated_at": "2026-07-20T09:00:00Z",
+            "tags": [{"name": "Dessert", "type": "repas", "description": None}],
+            "ingredients": [
+                {
+                    "name": "Farine",
+                    "image": None,
+                    "quantity": "250.00",
+                    "unity": "g",
+                    "person_numbers": 4,
+                },
+            ],
+            "steps": [
+                {
+                    "description": "Melanger farine et oeufs",
+                    "step_number": 1,
+                    "dury": "2026-07-25T00:05:00Z",
+                    "type": "prep",
+                },
+            ],
+        },
+    ],
+    "plannings": [
+        {
+            "name": "Semaine 1",
+            "meals": [
+                {"recipe_id": 12, "type": "plat", "lunch": "midi", "dayofweek": "lundi"},
+            ],
+        },
+    ],
+}
 
 
 @extend_schema_view(
@@ -90,6 +134,80 @@ from .serializers import (
                 summary="Remove editor and reader access",
                 description="Remove user 2's and user 3's access to the cookbook.",
                 value={"users": [2, 3]},
+                request_only=True,
+            ),
+        ],
+    ),
+    export_detail=extend_schema(
+        request=None,
+        responses=CookbookExportSerializer,
+        description=(
+            "Export a single cookbook (identified by `id` in the URL) as a portable JSON "
+            "object: its `name`, the list of its `recipes` (each in the same shape as "
+            "`GET /api/recipes/{id}/export/`, plus an export-local `id` used only to link "
+            "it to plannings below) and the list of its `plannings`, each with its scheduled "
+            "`meals` referencing a recipe via `recipe_id` (matching one of the `id`s in "
+            "`recipes[]` above - **not** a database id). Cookbook members (`shared_with`) "
+            "are never included. A meal scheduling a recipe that isn't filed into this "
+            "cookbook is silently omitted, since it has nothing to link to. The result can "
+            "be re-imported as-is via `POST /api/cookbooks/import/`. Any cookbook you can "
+            "read (your own, or one shared with you, at any role) can be exported this way."
+        ),
+        examples=[
+            OpenApiExample(
+                "Exported cookbook",
+                value=COOKBOOK_EXPORT_EXAMPLE,
+                response_only=True,
+            ),
+        ],
+    ),
+    export_list=extend_schema(
+        request=None,
+        responses=CookbookExportSerializer(many=True),
+        description=(
+            "Export **the cookbooks you created** (where you're the implicit admin) as a "
+            "JSON array, one portable object per cookbook - see "
+            "`GET /api/cookbooks/{id}/export/` for the shape of each object. Cookbooks only "
+            "shared with you (not created by you) are not included. The whole array can be "
+            "re-imported as-is via `POST /api/cookbooks/import/`."
+        ),
+        examples=[
+            OpenApiExample(
+                "Exported cookbooks you created",
+                value=[COOKBOOK_EXPORT_EXAMPLE],
+                response_only=True,
+            ),
+        ],
+    ),
+    import_data=extend_schema(
+        request=OpenApiTypes.OBJECT,
+        responses=CookbookSerializer(many=True),
+        description=(
+            "Import one or more cookbooks from JSON previously produced by "
+            "`GET /api/cookbooks/{id}/export/` or `GET /api/cookbooks/export/`. The request "
+            "body may be **either a single cookbook object or a JSON array of cookbook "
+            "objects** - both are accepted by this same endpoint. The authenticated user "
+            "becomes the creator (and implicit admin) of every cookbook created; nested "
+            "`recipes[]` are filed into the new cookbook (ingredients/tags matched by "
+            "`name` and reused if they already exist, otherwise created; steps always "
+            "created fresh) and nested `plannings[].meals[]` are rebuilt by resolving each "
+            "`recipe_id` against the `id` carried by that same payload item's `recipes[]` - "
+            "every `recipe_id` used in `meals[]` **must** match one of `recipes[].id`, or "
+            "the whole import is rejected. No members are imported - only the creator has "
+            "access to the new cookbook. The response is **always a JSON array** of the "
+            "created cookbooks (in their full, nested `CookbookSerializer` shape), even "
+            "when a single object was submitted. The import is all-or-nothing: if any item "
+            "fails validation, nothing is created and a 400 is returned."
+        ),
+        examples=[
+            OpenApiExample(
+                "Import a single cookbook",
+                value=COOKBOOK_EXPORT_EXAMPLE,
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Import a list of cookbooks",
+                value=[COOKBOOK_EXPORT_EXAMPLE],
                 request_only=True,
             ),
         ],
@@ -176,3 +294,27 @@ class CookbookViewSet(viewsets.ModelViewSet):
 
         cookbook.refresh_from_db()
         return Response(CookbookSerializer(cookbook).data)
+
+    @action(detail=True, methods=["get"], url_path="export")
+    def export_detail(self, request: Request, pk=None) -> Response:
+        cookbook = self.get_object()
+        return Response(
+            export_cookbook(cookbook),
+            headers={"Content-Disposition": f'attachment; filename="cookbook_{cookbook.pk}.json"'},
+        )
+
+    @action(detail=False, methods=["get"], url_path="export")
+    def export_list(self, request: Request) -> Response:
+        cookbooks = self.get_queryset().filter(creator=request.user)
+        return Response(
+            export_cookbooks(cookbooks),
+            headers={"Content-Disposition": 'attachment; filename="cookbooks_export.json"'},
+        )
+
+    @action(detail=False, methods=["post"], url_path="import")
+    def import_data(self, request: Request) -> Response:
+        cookbooks = import_cookbooks(request.data, request.user)
+        return Response(
+            CookbookSerializer(cookbooks, many=True, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
