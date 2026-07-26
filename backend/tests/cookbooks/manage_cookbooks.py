@@ -2,7 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from cookbooks.models import Cookbook
+from cookbooks.models import DEFAULT_COOKBOOK_ICON, Cookbook
 from planning.models import Planning
 from recipes.models import Recipe
 from tests.cookbooks.conftest import APIClient
@@ -25,6 +25,29 @@ def test_owner_can_create_cookbook(auth_client: APIClient, regular_user):
     assert response.data["name"] == "Mon carnet"
     assert response.data["creator"]["id"] == regular_user.pk
     assert response.data["shared_with"] == []
+
+
+def test_creating_a_cookbook_without_icon_gets_the_hardcoded_default(auth_client: APIClient):
+    """Test that a cookbook created without an ``icon`` gets the hard-coded default one."""
+    url = reverse("cookbook-list")
+
+    response = auth_client.post(url, {"name": "Mon carnet"}, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data is not None
+    assert response.data["icon"] == DEFAULT_COOKBOOK_ICON
+
+
+def test_creating_a_cookbook_with_a_custom_icon_uses_it(auth_client: APIClient):
+    """Test that an explicit ``icon`` overrides the hard-coded default."""
+    url = reverse("cookbook-list")
+    custom_icon = "data:image/png;base64,AAAA"
+
+    response = auth_client.post(url, {"name": "Mon carnet", "icon": custom_icon}, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data is not None
+    assert response.data["icon"] == custom_icon
 
 
 def test_owner_can_rename_own_cookbook(auth_client: APIClient, owned_cookbook: Cookbook):
@@ -150,3 +173,38 @@ def test_cookbook_detail_lists_its_recipes_and_plannings(
     assert response.data["recipes"][0]["title"] == "Recette du carnet"
     assert [p["id"] for p in response.data["plannings"]] == [planning.pk]
     assert response.data["plannings"][0]["name"] == "Semaine 1"
+
+
+##########################################-
+# shared_with_me: cookbooks shared with the caller vs. their own
+##########################################-
+
+
+def test_shared_with_me_filter_true_returns_only_cookbooks_shared_with_caller(
+    auth_client: APIClient, owned_cookbook: Cookbook, cookbook_shared_as_reader: Cookbook
+):
+    """Test that ``?shared_with_me=true`` only returns cookbooks shared with the caller,
+    not the ones they created themselves.
+    """
+    url = reverse("cookbook-list")
+
+    response = auth_client.get(url, {"shared_with_me": "true"})
+
+    assert response.data is not None
+    names = [item["name"] for item in response.data["results"]]
+    assert names == [cookbook_shared_as_reader.name]
+
+
+def test_shared_with_me_filter_false_returns_only_the_callers_own_cookbooks(
+    auth_client: APIClient, owned_cookbook: Cookbook, cookbook_shared_as_reader: Cookbook
+):
+    """Test that ``?shared_with_me=false`` excludes cookbooks shared with the caller,
+    keeping only the ones they created themselves.
+    """
+    url = reverse("cookbook-list")
+
+    response = auth_client.get(url, {"shared_with_me": "false"})
+
+    assert response.data is not None
+    names = [item["name"] for item in response.data["results"]]
+    assert names == [owned_cookbook.name]

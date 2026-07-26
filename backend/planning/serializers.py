@@ -46,7 +46,16 @@ class PlanningSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Planning
-        fields = ["id", "name", "creator", "cookbook", "meals", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "name",
+            "icon",
+            "creator",
+            "cookbook",
+            "meals",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = fields
 
 
@@ -66,7 +75,7 @@ class PlanningWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Planning
-        fields = ["id", "name", "cookbook", "meals"]
+        fields = ["id", "name", "icon", "cookbook", "meals"]
         read_only_fields = ["id"]
 
     def validate_cookbook(self, cookbook):

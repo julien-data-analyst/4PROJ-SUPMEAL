@@ -184,6 +184,16 @@ RECIPE_EXPORT_EXAMPLE = {
                 examples=[OpenApiExample("Exemple", value=True)],
             ),
             OpenApiParameter(
+                name="shared_with_me",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "`true` : uniquement les recettes rangees dans un cookbook partage avec "
+                    "l'utilisateur courant (dont il n'est pas le proprietaire). `false` : "
+                    "exclut ces recettes."
+                ),
+                examples=[OpenApiExample("Exemple", value=True)],
+            ),
+            OpenApiParameter(
                 name="prep_time_min",
                 type=OpenApiTypes.NUMBER,
                 description=(

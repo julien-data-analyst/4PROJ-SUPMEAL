@@ -45,6 +45,7 @@ class RecipeFilter(django_filters.FilterSet):
     cookbook = django_filters.CharFilter(field_name="cookbook__name", lookup_expr="icontains")
     in_cookbook = django_filters.BooleanFilter(method="filter_in_cookbook")
     favorite = django_filters.BooleanFilter(method="filter_favorite")
+    shared_with_me = django_filters.BooleanFilter(method="filter_shared_with_me")
     prep_time_min = django_filters.NumberFilter(method="filter_prep_time_min")
     prep_time_max = django_filters.NumberFilter(method="filter_prep_time_max")
     cooking_duration_min = django_filters.NumberFilter(
@@ -91,6 +92,13 @@ class RecipeFilter(django_filters.FilterSet):
         if value:
             return queryset.filter(favorited_by__user=user)
         return queryset.exclude(favorited_by__user=user)
+
+    def filter_shared_with_me(self, queryset: QuerySet, name: str, value: bool) -> QuerySet:
+        """Recipes filed in a cookbook shared with the caller (not one they created)."""
+        user = self.request.user  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+        if value:
+            return queryset.filter(cookbook__shared_with__user=user)
+        return queryset.exclude(cookbook__shared_with__user=user)
 
     def filter_prep_time_min(self, queryset: QuerySet, name: str, value: float) -> QuerySet:
         return queryset.annotate(prep_minutes=Coalesce(_prep_minutes_subquery(), 0.0)).filter(
