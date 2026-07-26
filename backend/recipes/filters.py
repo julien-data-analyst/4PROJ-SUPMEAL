@@ -93,11 +93,11 @@ class RecipeFilter(django_filters.FilterSet):
         return queryset.exclude(favorited_by__user=user)
 
     def filter_prep_time_min(self, queryset: QuerySet, name: str, value: float) -> QuerySet:
-        return queryset.annotate(
-            prep_minutes=Coalesce(_prep_minutes_subquery(), 0.0)
-        ).filter(prep_minutes__gte=value)
+        return queryset.annotate(prep_minutes=Coalesce(_prep_minutes_subquery(), 0.0)).filter(
+            prep_minutes__gte=value
+        )
 
     def filter_prep_time_max(self, queryset: QuerySet, name: str, value: float) -> QuerySet:
-        return queryset.annotate(
-            prep_minutes=Coalesce(_prep_minutes_subquery(), 0.0)
-        ).filter(prep_minutes__lte=value)
+        return queryset.annotate(prep_minutes=Coalesce(_prep_minutes_subquery(), 0.0)).filter(
+            prep_minutes__lte=value
+        )
