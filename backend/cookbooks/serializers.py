@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from planning.serializers import PlanningSerializer
@@ -59,10 +60,20 @@ class CookbookWriteSerializer(serializers.ModelSerializer):
 
 
 class ShareItemSerializer(serializers.Serializer):
-    """One ``{user, role}`` entry of a share request."""
+    """One ``{user, role}`` or ``{email, role}`` entry of a share request.
+
+    The user to share with can be identified either by their ``id`` (``user``)
+    or by their ``email`` address - exactly one of the two must be given.
+    """
 
     user = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), help_text="ID of the user to grant access to."
+        queryset=User.objects.all(),
+        required=False,
+        help_text="ID of the user to grant access to. Provide this or `email`, not both.",
+    )
+    email = serializers.EmailField(
+        required=False,
+        help_text="Email address of the user to grant access to. Provide this or `user`, not both.",
     )
     role = serializers.ChoiceField(
         choices=SharedUserCookbook.Role.choices,
@@ -74,6 +85,23 @@ class ShareItemSerializer(serializers.Serializer):
             "creator is always its implicit admin and can't be added to `shares`."
         ),
     )
+
+    def validate(self, attrs: dict) -> dict:
+        user = attrs.get("user")
+        email = attrs.get("email")
+        if bool(user) == bool(email):
+            raise serializers.ValidationError(
+                "Provide exactly one of `user` (id) or `email`, not both or neither."
+            )
+        if email:
+            try:
+                attrs["user"] = User.objects.get(email__iexact=email)
+            except ObjectDoesNotExist:
+                raise serializers.ValidationError(
+                    {"email": "No user found with this email address."}
+                )
+            del attrs["email"]
+        return attrs
 
 
 class CookbookShareSerializer(serializers.Serializer):

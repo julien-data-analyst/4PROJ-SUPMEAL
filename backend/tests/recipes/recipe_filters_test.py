@@ -246,6 +246,57 @@ def test_in_cookbook_filter_true_and_false(
     assert _titles(response_false) == [standalone.title]
 
 
+##########################################-
+# shared_with_me: cookbooks shared with the caller
+##########################################-
+
+
+def test_shared_with_me_filter_true_returns_only_recipes_from_cookbooks_shared_with_caller(
+    auth_client: APIClient,
+    regular_user: User,
+    owned_cookbook: Cookbook,
+    cookbook_shared_with_regular_user: Cookbook,
+):
+    """Test that ``?shared_with_me=true`` only returns recipes filed in a cookbook shared
+    with the caller - not their own cookbooks, and not standalone recipes.
+    """
+    _make_recipe(creator=regular_user, title="Dans mon carnet", cookbook=owned_cookbook)
+    shared = _make_recipe(
+        creator=regular_user,
+        title="Dans un carnet partage",
+        cookbook=cookbook_shared_with_regular_user,
+    )
+    _make_recipe(creator=regular_user, title="Recette autonome")
+    url = reverse("recipe-list")
+
+    response = auth_client.get(url, {"shared_with_me": "true"})
+
+    assert _titles(response) == [shared.title]
+
+
+def test_shared_with_me_filter_false_excludes_recipes_from_cookbooks_shared_with_caller(
+    auth_client: APIClient,
+    regular_user: User,
+    owned_cookbook: Cookbook,
+    cookbook_shared_with_regular_user: Cookbook,
+):
+    """Test that ``?shared_with_me=false`` excludes recipes filed in a cookbook shared
+    with the caller, keeping their own cookbooks and standalone recipes.
+    """
+    own = _make_recipe(creator=regular_user, title="Dans mon carnet", cookbook=owned_cookbook)
+    _make_recipe(
+        creator=regular_user,
+        title="Dans un carnet partage",
+        cookbook=cookbook_shared_with_regular_user,
+    )
+    standalone = _make_recipe(creator=regular_user, title="Recette autonome")
+    url = reverse("recipe-list")
+
+    response = auth_client.get(url, {"shared_with_me": "false"})
+
+    assert set(_titles(response)) == {own.title, standalone.title}
+
+
 ####################################-
 # prep_time (sum of step durations)
 ####################################-

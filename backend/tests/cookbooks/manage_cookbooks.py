@@ -150,3 +150,38 @@ def test_cookbook_detail_lists_its_recipes_and_plannings(
     assert response.data["recipes"][0]["title"] == "Recette du carnet"
     assert [p["id"] for p in response.data["plannings"]] == [planning.pk]
     assert response.data["plannings"][0]["name"] == "Semaine 1"
+
+
+##########################################-
+# shared_with_me: cookbooks shared with the caller vs. their own
+##########################################-
+
+
+def test_shared_with_me_filter_true_returns_only_cookbooks_shared_with_caller(
+    auth_client: APIClient, owned_cookbook: Cookbook, cookbook_shared_as_reader: Cookbook
+):
+    """Test that ``?shared_with_me=true`` only returns cookbooks shared with the caller,
+    not the ones they created themselves.
+    """
+    url = reverse("cookbook-list")
+
+    response = auth_client.get(url, {"shared_with_me": "true"})
+
+    assert response.data is not None
+    names = [item["name"] for item in response.data["results"]]
+    assert names == [cookbook_shared_as_reader.name]
+
+
+def test_shared_with_me_filter_false_returns_only_the_callers_own_cookbooks(
+    auth_client: APIClient, owned_cookbook: Cookbook, cookbook_shared_as_reader: Cookbook
+):
+    """Test that ``?shared_with_me=false`` excludes cookbooks shared with the caller,
+    keeping only the ones they created themselves.
+    """
+    url = reverse("cookbook-list")
+
+    response = auth_client.get(url, {"shared_with_me": "false"})
+
+    assert response.data is not None
+    names = [item["name"] for item in response.data["results"]]
+    assert names == [owned_cookbook.name]

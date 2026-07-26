@@ -110,6 +110,81 @@ def test_sharing_with_the_cookbook_creator_is_rejected(
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+def test_admin_can_share_cookbook_with_a_user_by_email(
+    auth_client: APIClient, owned_cookbook: Cookbook, other_user: User
+):
+    """Test that ``shares[].email`` grants access to the matching user, just like ``user``."""
+    url = reverse("cookbook-share", kwargs={"pk": owned_cookbook.pk})
+
+    response = auth_client.post(
+        url, {"shares": [{"email": other_user.email, "role": "editor"}]}, format="json"
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data is not None
+    assert response.data["shared_with"][0]["user"]["id"] == other_user.pk
+    assert SharedUserCookbook.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        cookbook=owned_cookbook, user=other_user, role="editor"
+    ).exists()
+
+
+def test_share_by_email_is_case_insensitive(
+    auth_client: APIClient, owned_cookbook: Cookbook, other_user: User
+):
+    """Test that the email lookup ignores case, e.g. an uppercased domain still matches."""
+    url = reverse("cookbook-share", kwargs={"pk": owned_cookbook.pk})
+
+    response = auth_client.post(
+        url, {"shares": [{"email": other_user.email.upper(), "role": "reader"}]}, format="json"
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert SharedUserCookbook.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        cookbook=owned_cookbook, user=other_user, role="reader"
+    ).exists()
+
+
+def test_share_by_unknown_email_is_rejected(auth_client: APIClient, owned_cookbook: Cookbook):
+    """Test that sharing with an email matching no user is a 400, not a silent no-op."""
+    url = reverse("cookbook-share", kwargs={"pk": owned_cookbook.pk})
+
+    response = auth_client.post(
+        url,
+        {"shares": [{"email": "unknown@example.com", "role": "reader"}]},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert not SharedUserCookbook.objects.exists()  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def test_share_with_both_user_and_email_is_rejected(
+    auth_client: APIClient, owned_cookbook: Cookbook, other_user: User
+):
+    """Test that providing both ``user`` and ``email`` in the same entry is rejected."""
+    url = reverse("cookbook-share", kwargs={"pk": owned_cookbook.pk})
+
+    response = auth_client.post(
+        url,
+        {"shares": [{"user": other_user.pk, "email": other_user.email, "role": "reader"}]},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert not SharedUserCookbook.objects.exists()  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def test_share_with_neither_user_nor_email_is_rejected(
+    auth_client: APIClient, owned_cookbook: Cookbook
+):
+    """Test that an entry missing both ``user`` and ``email`` is rejected."""
+    url = reverse("cookbook-share", kwargs={"pk": owned_cookbook.pk})
+
+    response = auth_client.post(url, {"shares": [{"role": "reader"}]}, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
 def test_non_admin_cannot_share_cookbook(
     auth_client: APIClient, cookbook_shared_as_editor: Cookbook, stranger: User
 ):

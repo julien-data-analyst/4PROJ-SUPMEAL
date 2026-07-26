@@ -82,8 +82,10 @@ COOKBOOK_EXPORT_EXAMPLE = {
             "the same upsert, so either works for either case. Admin-only (the cookbook's "
             "creator, or staff) - see `cookbooks.permissions.IsCookbookAdmin`. Re-sharing "
             "with a user who already has access **updates their role** rather than "
-            "creating a duplicate entry. Returns the cookbook with its up-to-date "
-            "`shared_with` list."
+            "creating a duplicate entry. Each entry in `shares` identifies the user to "
+            "share with by **either** `user` (their id) **or** `email` (their email "
+            "address) - exactly one of the two must be given per entry. Returns the "
+            "cookbook with its up-to-date `shared_with` list."
         ),
         examples=[
             OpenApiExample(
@@ -96,6 +98,13 @@ COOKBOOK_EXPORT_EXAMPLE = {
                         {"user": 3, "role": "reader"},
                     ]
                 },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Share by email",
+                summary="Grant access using an email address instead of a user id",
+                description="Same as sharing by `user`, but identifying the user by `email`.",
+                value={"shares": [{"email": "bob@example.com", "role": "editor"}]},
                 request_only=True,
             ),
             OpenApiExample(
@@ -229,6 +238,16 @@ COOKBOOK_EXPORT_EXAMPLE = {
                 description="Filtre par nom de cookbook (recherche partielle, insensible a la "
                 "casse).",
                 examples=[OpenApiExample("Exemple", value="Recettes de famille")],
+            ),
+            OpenApiParameter(
+                name="shared_with_me",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "`true` : uniquement les cookbooks partages avec l'utilisateur courant "
+                    "(dont il n'est pas le proprietaire). `false` : uniquement ses propres "
+                    "cookbooks (crees par lui)."
+                ),
+                examples=[OpenApiExample("Exemple", value=True)],
             ),
             OpenApiParameter(
                 name="page",
