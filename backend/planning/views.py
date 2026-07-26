@@ -1,10 +1,19 @@
 from django.db import models, transaction
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
+from config.pagination import DefaultPagination
 from cookbooks.permissions import CookbookItemPermission
 
+from .filters import PlanningFilter
 from .models import Planning
 from .serializers import PlanningSerializer, PlanningWriteSerializer
 
@@ -13,6 +22,45 @@ from .serializers import PlanningSerializer, PlanningWriteSerializer
     create=extend_schema(request=PlanningWriteSerializer, responses=PlanningSerializer),
     update=extend_schema(request=PlanningWriteSerializer, responses=PlanningSerializer),
     partial_update=extend_schema(request=PlanningWriteSerializer, responses=PlanningSerializer),
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="name",
+                type=OpenApiTypes.STR,
+                description="Filtre par nom de planning (recherche partielle, insensible a la "
+                "casse).",
+                examples=[OpenApiExample("Exemple", value="Semaine du 20 juillet")],
+            ),
+            OpenApiParameter(
+                name="cookbook",
+                type=OpenApiTypes.STR,
+                description="Filtre par nom de cookbook (recherche partielle, insensible a la "
+                "casse).",
+                examples=[OpenApiExample("Exemple", value="Carnet de famille")],
+            ),
+            OpenApiParameter(
+                name="in_cookbook",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "`true` : uniquement les plannings ranges dans un cookbook. "
+                    "`false` : uniquement les plannings autonomes (sans cookbook)."
+                ),
+                examples=[OpenApiExample("Exemple", value=True)],
+            ),
+            OpenApiParameter(
+                name="page",
+                type=OpenApiTypes.INT,
+                description="Numero de page a retourner.",
+                examples=[OpenApiExample("Exemple", value=1)],
+            ),
+            OpenApiParameter(
+                name="page_size",
+                type=OpenApiTypes.INT,
+                description="Nombre de plannings par page (10 par defaut, 100 maximum).",
+                examples=[OpenApiExample("Exemple", value=10)],
+            ),
+        ],
+    ),
 )
 class PlanningViewSet(viewsets.ModelViewSet):
     """CRUD for weekly meal plannings, including their scheduled meals.
@@ -28,6 +76,9 @@ class PlanningViewSet(viewsets.ModelViewSet):
     """
 
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = PlanningFilter
+    pagination_class = DefaultPagination
 
     def get_queryset(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         user = self.request.user
@@ -41,6 +92,7 @@ class PlanningViewSet(viewsets.ModelViewSet):
             .select_related("creator", "cookbook")
             .prefetch_related("recipe_plannings__recipe")
             .distinct()
+            .order_by("-updated_at")
         )
 
     def get_serializer_class(self):  # pyright: ignore[reportIncompatibleMethodOverride]
