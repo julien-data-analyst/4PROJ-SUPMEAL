@@ -1,10 +1,14 @@
+from datetime import UTC, datetime
+
 from rest_framework import generics, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+from rest_framework_simplejwt.tokens import RefreshToken, Token
 
 from .models import User
 from .oauth_microsoft import (
@@ -17,6 +21,7 @@ from .permissions import IsSelfOrStaff
 from .serializers import (
     ChangePasswordSerializer,
     LoginSerializer,
+    LogoutSerializer,
     MicrosoftOAuthSerializer,
     UserRegisterSerializer,
     UserSerializer,
@@ -26,6 +31,30 @@ from .serializers import (
 def _tokens_for(user: User) -> dict:
     refresh = RefreshToken.for_user(user)
     return {"access": str(refresh.access_token), "refresh": str(refresh)}
+
+
+def _blacklist_access_token(token: Token) -> None:
+    """Blacklists an access token, mirroring what ``RefreshToken.blacklist()`` does.
+
+    Access tokens aren't tracked as ``OutstandingToken`` by Simple JWT (only
+    refresh tokens are), so the row has to be created here before it can be
+    blacklisted. Paired with ``BlacklistAwareJWTAuthentication``, this makes
+    the current access token unusable immediately instead of staying valid
+    until it naturally expires.
+    """
+
+    outstanding, _created = OutstandingToken.objects.get_or_create(  # pyright: ignore[reportAttributeAccessIssue]
+        jti=token["jti"],
+        defaults={
+            "token": str(token),
+            "created_at": datetime.fromtimestamp(float(token["iat"]), tz=UTC),
+            "expires_at": datetime.fromtimestamp(float(token["exp"]), tz=UTC),
+            "user_id": int(token["user_id"]),
+        },
+    )
+    BlacklistedToken.objects.get_or_create(  # pyright: ignore[reportAttributeAccessIssue]
+        token=outstanding
+    )
 
 
 class RegisterView(generics.CreateAPIView):
@@ -101,6 +130,41 @@ class ChangePasswordView(APIView):
         )
         request.user.save()
         return Response({"detail": "Password updated successfully."})
+
+
+class LogoutView(APIView):
+    """Logs the authenticated user out by blacklisting their refresh and access tokens.
+
+    Requires the refresh token in the request body; the access token used to
+    authenticate the request is blacklisted too, so neither can be reused
+    afterwards.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request) -> Response:
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            refresh_token = RefreshToken(
+                serializer.validated_data[  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
+                    "refresh"
+                ]
+            )
+        except TokenError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if str(refresh_token["user_id"]) != str(request.user.id):
+            return Response(
+                {"detail": "Refresh token does not belong to the authenticated user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        refresh_token.blacklist()
+        _blacklist_access_token(request.auth)
+
+        return Response({"detail": "Logged out successfully."})
 
 
 class UserViewSet(
