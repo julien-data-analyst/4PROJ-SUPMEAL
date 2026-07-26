@@ -9,8 +9,10 @@ class Message(models.Model):
     """A chat message posted by a user in the context of a cookbook/recipe.
 
     Maps the schema's ``message`` table. ``canal`` identifies the
-    conversation channel (free text in the schema); messages are always
-    tied to both a ``Cookbook`` and a ``Recipe`` and are ordered
+    conversation channel (free text in the schema). A message is always
+    tied to a ``Cookbook``; ``recipe`` is nullable so that a message can
+    target either the cookbook's global channel (``recipe=None``) or a
+    specific recipe's channel within that cookbook. Messages are ordered
     chronologically (see ``Meta.ordering``).
     """
 
@@ -20,7 +22,13 @@ class Message(models.Model):
     )
     canal = models.CharField(max_length=50)
     cookbook = models.ForeignKey(Cookbook, on_delete=models.PROTECT, related_name="messages")
-    recipe = models.ForeignKey(Recipe, on_delete=models.PROTECT, related_name="messages")
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.PROTECT,
+        related_name="messages",
+        blank=True,
+        null=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
