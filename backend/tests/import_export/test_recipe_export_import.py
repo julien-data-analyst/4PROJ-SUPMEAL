@@ -160,9 +160,7 @@ def test_import_of_a_partially_invalid_list_creates_nothing(
     """All-or-nothing: one bad item in the array must roll back the whole batch."""
     url = reverse("recipe-import-data")
 
-    response = auth_client.post(
-        url, [recipe_export_payload, {"title": ""}], format="json"
-    )
+    response = auth_client.post(url, [recipe_export_payload, {"title": ""}], format="json")
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert Recipe.objects.count() == 0  # pyright: ignore[reportAttributeAccessIssue]
