@@ -25,6 +25,7 @@ def test_export_detail_returns_recipes_with_link_id_and_plannings_referencing_it
 
     assert response.status_code == status.HTTP_200_OK
     data = response.data
+    assert data is not None
     assert data["name"] == "Mon carnet"
     assert "shared_with" not in data
     assert len(data["recipes"]) == 1
@@ -40,9 +41,7 @@ def test_export_detail_returns_recipes_with_link_id_and_plannings_referencing_it
         "lunch": "midi",
         "dayofweek": "lundi",
     }
-    assert (
-        response["Content-Disposition"] == f'attachment; filename="cookbook_{cookbook.pk}.json"'
-    )
+    assert response["Content-Disposition"] == f'attachment; filename="cookbook_{cookbook.pk}.json"'
 
 
 def test_export_detail_drops_meals_scheduling_a_recipe_outside_the_cookbook(
