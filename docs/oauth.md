@@ -1,5 +1,7 @@
 # OAuth
 
+🇬🇧 English | [🇫🇷 Français](oauth.fr.md)
+
 ## Summary
 
 - [Overview](#overview)
