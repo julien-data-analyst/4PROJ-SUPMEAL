@@ -1,7 +1,21 @@
+from drf_spectacular.contrib.rest_framework_simplejwt import SimpleJWTScheme
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import Token
+
+
+class BlacklistAwareJWTScheme(SimpleJWTScheme):
+    """Tells drf-spectacular to document ``BlacklistAwareJWTAuthentication`` the same way
+    it already documents plain ``JWTAuthentication`` (bearer JWT security scheme).
+
+    drf-spectacular's built-in extension only matches the exact
+    ``rest_framework_simplejwt.authentication.JWTAuthentication`` class, not subclasses -
+    without this, every authenticated endpoint's schema would silently lose its "Authorize"
+    padlock/security requirement now that this subclass is the project's default.
+    """
+
+    target_class = "users.authentication.BlacklistAwareJWTAuthentication"
 
 
 class BlacklistAwareJWTAuthentication(JWTAuthentication):
