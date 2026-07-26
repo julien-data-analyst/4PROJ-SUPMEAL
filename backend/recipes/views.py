@@ -19,8 +19,8 @@ from config.pagination import DefaultPagination
 from cookbooks.permissions import CookbookItemPermission
 
 from .export import RecipeExportSerializer, export_recipe, export_recipes
-from .imports import import_recipes
 from .filters import RecipeFilter
+from .imports import import_recipes
 from .models import FavoriteRecipe, Ingredient, Recipe, Tag
 from .serializers import (
     IngredientSerializer,
@@ -129,6 +129,9 @@ RECIPE_EXPORT_EXAMPLE = {
                 "Import a list of recipes",
                 value=[RECIPE_EXPORT_EXAMPLE],
                 request_only=True,
+            ),
+        ],
+    ),
     list=extend_schema(
         parameters=[
             OpenApiParameter(
@@ -308,6 +311,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             RecipeSerializer(recipes, many=True, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
+
     @action(detail=True, methods=["post", "delete"])
     def favorite(self, request: Request, pk=None) -> Response:
         """Add (``POST``) or remove (``DELETE``) this recipe from the caller's favorites."""

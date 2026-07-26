@@ -62,5 +62,5 @@ def import_recipes(payload, user) -> list[Recipe]:
     with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
         return [
             _create_recipe(item, user)
-            for item in serializer.validated_data  # pyright: ignore[reportGeneralTypeIssues]
+            for item in serializer.validated_data  # pyright: ignore[reportOptionalIterable, reportGeneralTypeIssues]
         ]
