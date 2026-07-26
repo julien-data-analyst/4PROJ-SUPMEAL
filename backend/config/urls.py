@@ -25,6 +25,7 @@ urlpatterns = [
     path("api/", include("cookbooks.urls")),
     path("api/", include("recipes.urls")),
     path("api/", include("planning.urls")),
+    path("api/", include("messaging.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/",
