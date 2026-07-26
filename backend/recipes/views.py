@@ -1,7 +1,13 @@
 from django.db import models, transaction
+from django.db.models import Exists, OuterRef
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
@@ -9,11 +15,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from config.pagination import DefaultPagination
 from cookbooks.permissions import CookbookItemPermission
 
 from .export import RecipeExportSerializer, export_recipe, export_recipes
 from .imports import import_recipes
-from .models import Ingredient, Recipe, Tag
+from .filters import RecipeFilter
+from .models import FavoriteRecipe, Ingredient, Recipe, Tag
 from .serializers import (
     IngredientSerializer,
     RecipeSerializer,
@@ -121,6 +129,98 @@ RECIPE_EXPORT_EXAMPLE = {
                 "Import a list of recipes",
                 value=[RECIPE_EXPORT_EXAMPLE],
                 request_only=True,
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="name",
+                type=OpenApiTypes.STR,
+                description="Recherche plein texte (PostgreSQL) sur le titre de la recette.",
+                examples=[OpenApiExample("Exemple", value="crepes")],
+            ),
+            OpenApiParameter(
+                name="tags",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Liste de noms et/ou d'identifiants de tags separes par des virgules. "
+                    "La recette doit porter TOUS les tags listes (ET logique)."
+                ),
+                examples=[OpenApiExample("Exemple", value="Vegetarien,Rapide")],
+            ),
+            OpenApiParameter(
+                name="ingredients",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Liste de noms et/ou d'identifiants d'ingredients separes par des virgules. "
+                    "La recette doit contenir TOUS les ingredients listes (ET logique)."
+                ),
+                examples=[OpenApiExample("Exemple", value="Farine,3")],
+            ),
+            OpenApiParameter(
+                name="cookbook",
+                type=OpenApiTypes.STR,
+                description="Filtre par nom de cookbook (recherche partielle, insensible a la "
+                "casse).",
+                examples=[OpenApiExample("Exemple", value="Carnet de famille")],
+            ),
+            OpenApiParameter(
+                name="in_cookbook",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "`true` : uniquement les recettes rangees dans un cookbook. "
+                    "`false` : uniquement les recettes autonomes (sans cookbook)."
+                ),
+                examples=[OpenApiExample("Exemple", value=True)],
+            ),
+            OpenApiParameter(
+                name="favorite",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "`true` : uniquement les recettes favorites de l'utilisateur courant. "
+                    "`false` : uniquement celles qui ne le sont pas."
+                ),
+                examples=[OpenApiExample("Exemple", value=True)],
+            ),
+            OpenApiParameter(
+                name="prep_time_min",
+                type=OpenApiTypes.NUMBER,
+                description=(
+                    "Temps de preparation minimal, en minutes (somme des durees des "
+                    "etapes de la recette)."
+                ),
+                examples=[OpenApiExample("Exemple", value=10)],
+            ),
+            OpenApiParameter(
+                name="prep_time_max",
+                type=OpenApiTypes.NUMBER,
+                description=(
+                    "Temps de preparation maximal, en minutes (somme des durees des "
+                    "etapes de la recette)."
+                ),
+                examples=[OpenApiExample("Exemple", value=30)],
+            ),
+            OpenApiParameter(
+                name="cooking_duration_min",
+                type=OpenApiTypes.NUMBER,
+                description="Temps de cuisson minimal, en minutes (champ `cooking_duration`).",
+                examples=[OpenApiExample("Exemple", value=5)],
+            ),
+            OpenApiParameter(
+                name="cooking_duration_max",
+                type=OpenApiTypes.NUMBER,
+                description="Temps de cuisson maximal, en minutes (champ `cooking_duration`).",
+                examples=[OpenApiExample("Exemple", value=60)],
+            ),
+            OpenApiParameter(
+                name="page",
+                type=OpenApiTypes.INT,
+                description="Numero de page a retourner.",
+                examples=[OpenApiExample("Exemple", value=1)],
+            ),
+            OpenApiParameter(
+                name="page_size",
+                type=OpenApiTypes.INT,
+                description="Nombre de recettes par page (10 par defaut, 100 maximum).",
+                examples=[OpenApiExample("Exemple", value=10)],
             ),
         ],
     ),
@@ -136,6 +236,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """
 
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = RecipeFilter
+    pagination_class = DefaultPagination
 
     def get_queryset(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         user = self.request.user
@@ -148,7 +251,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
             .select_related("creator", "cookbook")
             .prefetch_related("recipe_ingredients__ingredient", "recipe_tags__tag", "steps")
+            .annotate(
+                is_favorite=Exists(
+                    FavoriteRecipe.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+                        user=user, recipe=OuterRef("pk")
+                    )
+                )
+            )
             .distinct()
+            .order_by("-updated_at")
         )
 
     def get_serializer_class(self):  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -162,12 +273,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_destroy(self, instance: Recipe) -> None:
-        # Steps/ingredients/tags are PROTECTed FKs to Recipe (no cascade), so
-        # they must be unlinked explicitly before the recipe itself can go.
+        # Steps/ingredients/tags/favorites are PROTECTed FKs to Recipe (no
+        # cascade), so they must be unlinked explicitly before the recipe
+        # itself can go.
         with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
             instance.recipe_ingredients.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
             instance.recipe_tags.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
             instance.steps.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
+            instance.favorited_by.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
             instance.delete()
 
     @action(detail=True, methods=["get"], url_path="export")
@@ -195,6 +308,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
             RecipeSerializer(recipes, many=True, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
+    @action(detail=True, methods=["post", "delete"])
+    def favorite(self, request: Request, pk=None) -> Response:
+        """Add (``POST``) or remove (``DELETE``) this recipe from the caller's favorites."""
+        recipe = self.get_object()
+        if request.method == "POST":
+            _, created = FavoriteRecipe.objects.get_or_create(  # pyright: ignore[reportAttributeAccessIssue]
+                user=request.user, recipe=recipe
+            )
+            return Response(status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+        FavoriteRecipe.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+            user=request.user, recipe=recipe
+        ).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):

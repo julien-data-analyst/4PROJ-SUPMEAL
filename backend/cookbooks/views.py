@@ -1,7 +1,14 @@
 from django.db import models, transaction
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view,
+)
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -9,6 +16,9 @@ from rest_framework.response import Response
 
 from .export import CookbookExportSerializer, export_cookbook, export_cookbooks
 from .imports import import_cookbooks
+from config.pagination import DefaultPagination
+
+from .filters import CookbookFilter
 from .models import Cookbook, SharedUserCookbook
 from .permissions import IsCookbookAdmin
 from .serializers import (
@@ -209,6 +219,26 @@ COOKBOOK_EXPORT_EXAMPLE = {
                 "Import a list of cookbooks",
                 value=[COOKBOOK_EXPORT_EXAMPLE],
                 request_only=True,
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="name",
+                type=OpenApiTypes.STR,
+                description="Filtre par nom de cookbook (recherche partielle, insensible a la "
+                "casse).",
+                examples=[OpenApiExample("Exemple", value="Recettes de famille")],
+            ),
+            OpenApiParameter(
+                name="page",
+                type=OpenApiTypes.INT,
+                description="Numero de page a retourner.",
+                examples=[OpenApiExample("Exemple", value=1)],
+            ),
+            OpenApiParameter(
+                name="page_size",
+                type=OpenApiTypes.INT,
+                description="Nombre de cookbooks par page (10 par defaut, 100 maximum).",
+                examples=[OpenApiExample("Exemple", value=10)],
             ),
         ],
     ),
@@ -228,6 +258,9 @@ class CookbookViewSet(viewsets.ModelViewSet):
     """
 
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = CookbookFilter
+    pagination_class = DefaultPagination
 
     def get_queryset(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         user = self.request.user
@@ -249,6 +282,7 @@ class CookbookViewSet(viewsets.ModelViewSet):
                 "plannings__recipe_plannings__recipe__steps",
             )
             .distinct()
+            .order_by("-updated_at")
         )
 
     def get_serializer_class(self):  # pyright: ignore[reportIncompatibleMethodOverride]
