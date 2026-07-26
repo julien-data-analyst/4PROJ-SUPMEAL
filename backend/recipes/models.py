@@ -127,6 +127,26 @@ class UserPreference(models.Model):
         return f"{self.user} - {self.tag}"
 
 
+class FavoriteRecipe(models.Model):
+    """Marks that a user has favorited a recipe.
+
+    Not part of the original SQL schema (``docs/database.md``) - added on top
+    of it for personalized recipe listing. Mirrors ``UserPreference``'s shape
+    (composite PK on ``(user, recipe)``, ``PROTECT`` FKs) for consistency with
+    the project's other user/content join tables.
+    """
+
+    pk = models.CompositePrimaryKey("user", "recipe")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="favorite_recipes"
+    )
+    recipe = models.ForeignKey(Recipe, on_delete=models.PROTECT, related_name="favorited_by")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.user} - {self.recipe}"
+
+
 class Step(models.Model):
     """A single, ordered instruction step of a recipe.
 
