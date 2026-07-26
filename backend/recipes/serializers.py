@@ -84,6 +84,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     ingredients = RecipeIngredientSerializer(source="recipe_ingredients", many=True, read_only=True)
     tags = serializers.SerializerMethodField()
     steps = StepSerializer(many=True, read_only=True)
+    is_favorite = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = Recipe
@@ -98,6 +99,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             "ingredients",
             "tags",
             "steps",
+            "is_favorite",
             "created_at",
             "updated_at",
         ]
