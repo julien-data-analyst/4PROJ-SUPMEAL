@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from cookbooks.models import Cookbook
-from planning.models import Planning, RecipePlanning
+from planning.models import DEFAULT_PLANNING_ICON, Planning, RecipePlanning
 from recipes.models import Recipe
 from tests.planning.conftest import APIClient
 from users.models import User
@@ -43,6 +43,29 @@ def test_owner_can_create_planning_without_optional_meals(auth_client: APIClient
     assert response.status_code == status.HTTP_201_CREATED
     assert response.data is not None
     assert response.data["meals"] == []
+
+
+def test_creating_a_planning_without_icon_gets_the_hardcoded_default(auth_client: APIClient):
+    """Test that a planning created without an ``icon`` gets the hard-coded default one."""
+    url = reverse("planning-list")
+
+    response = auth_client.post(url, {"name": "Semaine vide"}, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data is not None
+    assert response.data["icon"] == DEFAULT_PLANNING_ICON
+
+
+def test_creating_a_planning_with_a_custom_icon_uses_it(auth_client: APIClient):
+    """Test that an explicit ``icon`` overrides the hard-coded default."""
+    url = reverse("planning-list")
+    custom_icon = "data:image/png;base64,AAAA"
+
+    response = auth_client.post(url, {"name": "Semaine vide", "icon": custom_icon}, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data is not None
+    assert response.data["icon"] == custom_icon
 
 
 def test_owner_can_schedule_a_full_day_of_six_meals(auth_client: APIClient, regular_user: User):

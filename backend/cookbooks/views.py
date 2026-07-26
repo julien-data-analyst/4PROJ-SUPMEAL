@@ -112,6 +112,7 @@ COOKBOOK_EXPORT_EXAMPLE = {
                 value={
                     "id": 1,
                     "name": "Recettes de famille",
+                    "icon": "data:image/svg+xml;base64,...",
                     "creator": {"id": 1, "username": "alice", "first_name": "Alice"},
                     "shared_with": [
                         {

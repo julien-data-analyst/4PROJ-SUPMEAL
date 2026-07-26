@@ -2,7 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from cookbooks.models import Cookbook
+from cookbooks.models import DEFAULT_COOKBOOK_ICON, Cookbook
 from planning.models import Planning
 from recipes.models import Recipe
 from tests.cookbooks.conftest import APIClient
@@ -25,6 +25,29 @@ def test_owner_can_create_cookbook(auth_client: APIClient, regular_user):
     assert response.data["name"] == "Mon carnet"
     assert response.data["creator"]["id"] == regular_user.pk
     assert response.data["shared_with"] == []
+
+
+def test_creating_a_cookbook_without_icon_gets_the_hardcoded_default(auth_client: APIClient):
+    """Test that a cookbook created without an ``icon`` gets the hard-coded default one."""
+    url = reverse("cookbook-list")
+
+    response = auth_client.post(url, {"name": "Mon carnet"}, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data is not None
+    assert response.data["icon"] == DEFAULT_COOKBOOK_ICON
+
+
+def test_creating_a_cookbook_with_a_custom_icon_uses_it(auth_client: APIClient):
+    """Test that an explicit ``icon`` overrides the hard-coded default."""
+    url = reverse("cookbook-list")
+    custom_icon = "data:image/png;base64,AAAA"
+
+    response = auth_client.post(url, {"name": "Mon carnet", "icon": custom_icon}, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data is not None
+    assert response.data["icon"] == custom_icon
 
 
 def test_owner_can_rename_own_cookbook(auth_client: APIClient, owned_cookbook: Cookbook):

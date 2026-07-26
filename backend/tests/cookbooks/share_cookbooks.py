@@ -135,7 +135,7 @@ def test_share_by_email_is_case_insensitive(
     url = reverse("cookbook-share", kwargs={"pk": owned_cookbook.pk})
 
     response = auth_client.post(
-        url, {"shares": [{"email": other_user.email.upper(), "role": "reader"}]}, format="json"
+        url, {"shares": [{"email": str(other_user.email).upper(), "role": "reader"}]}, format="json"
     )
 
     assert response.status_code == status.HTTP_200_OK
