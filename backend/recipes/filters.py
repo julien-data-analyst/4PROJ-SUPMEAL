@@ -22,7 +22,7 @@ def _prep_minutes_subquery() -> Subquery:
     users).
     """
     return Subquery(
-        Step.objects.filter(recipe=OuterRef("pk"))
+        Step.objects.filter(recipe=OuterRef("pk"))  # pyright: ignore[reportAttributeAccessIssue]
         .values("recipe")
         .annotate(total=Sum(_STEP_DURATION_MINUTES, output_field=FloatField()))
         .values("total"),
@@ -87,7 +87,7 @@ class RecipeFilter(django_filters.FilterSet):
         return queryset.filter(cookbook__isnull=not value)
 
     def filter_favorite(self, queryset: QuerySet, name: str, value: bool) -> QuerySet:
-        user = self.request.user  # pyright: ignore[reportAttributeAccessIssue]
+        user = self.request.user  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
         if value:
             return queryset.filter(favorited_by__user=user)
         return queryset.exclude(favorited_by__user=user)

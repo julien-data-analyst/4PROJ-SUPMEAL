@@ -226,7 +226,7 @@ def test_cookbook_filter_matches_cookbook_name(
     _make_recipe(creator=regular_user, title="Standalone recipe")
     url = reverse("recipe-list")
 
-    response = auth_client.get(url, {"cookbook": owned_cookbook.name.lower()[:5]})
+    response = auth_client.get(url, {"cookbook": str(owned_cookbook.name).lower()[:5]})
 
     assert _titles(response) == [filed.title]
 
@@ -325,11 +325,15 @@ def test_recipe_serializer_exposes_is_favorite(auth_client: APIClient, regular_u
     recipe = _make_recipe(creator=regular_user, title="Maybe favorite")
     url = reverse("recipe-detail", kwargs={"pk": recipe.pk})
 
-    assert auth_client.get(url).data["is_favorite"] is False
+    response = auth_client.get(url)
+    assert response.data is not None
+    assert response.data["is_favorite"] is False
 
     FavoriteRecipe.objects.create(user=regular_user, recipe=recipe)  # pyright: ignore[reportAttributeAccessIssue]
 
-    assert auth_client.get(url).data["is_favorite"] is True
+    response = auth_client.get(url)
+    assert response.data is not None
+    assert response.data["is_favorite"] is True
 
 
 def test_post_favorite_adds_recipe_to_callers_favorites(
