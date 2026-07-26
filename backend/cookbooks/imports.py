@@ -152,5 +152,5 @@ def import_cookbooks(payload, user) -> list[Cookbook]:
     with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
         return [
             _create_cookbook(item, user)
-            for item in serializer.validated_data  # pyright: ignore[reportGeneralTypeIssues]
+            for item in serializer.validated_data  # pyright: ignore[reportOptionalIterable, reportGeneralTypeIssues]
         ]

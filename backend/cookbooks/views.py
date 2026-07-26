@@ -1,5 +1,4 @@
 from django.db import models, transaction
-from rest_framework import status, viewsets
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -8,17 +7,17 @@ from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
 )
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .export import CookbookExportSerializer, export_cookbook, export_cookbooks
-from .imports import import_cookbooks
 from config.pagination import DefaultPagination
 
+from .export import CookbookExportSerializer, export_cookbook, export_cookbooks
 from .filters import CookbookFilter
+from .imports import import_cookbooks
 from .models import Cookbook, SharedUserCookbook
 from .permissions import IsCookbookAdmin
 from .serializers import (
@@ -219,6 +218,9 @@ COOKBOOK_EXPORT_EXAMPLE = {
                 "Import a list of cookbooks",
                 value=[COOKBOOK_EXPORT_EXAMPLE],
                 request_only=True,
+            ),
+        ],
+    ),
     list=extend_schema(
         parameters=[
             OpenApiParameter(
