@@ -96,7 +96,7 @@ docker compose -f docker-compose.prod.yml down
 | Service     | URL                   |
 | ----------- | --------------------- |
 | Frontend    | http://localhost:3000 |
-| Backend API | http://localhost:8000 |
+| Backend API | http://localhost:8008 |
 
 ---
 
