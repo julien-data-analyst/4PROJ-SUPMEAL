@@ -4,6 +4,16 @@ from django.db import models
 from cookbooks.models import Cookbook
 from recipes.models import Recipe
 
+# Hard-coded default icon (a plain SVG, base64-encoded as a data URI) used for
+# every planning that doesn't set its own - not part of the original SQL
+# schema (``docs/database.md``), added on top of it purely for display.
+DEFAULT_PLANNING_ICON = (
+    "data:image/svg+xml;base64,"
+    "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0i"
+    "IzNCNkU4RiI+PHBhdGggZD0iTTcgMnYySDVhMiAyIDAgMCAwLTIgMnYxNGEyIDIgMCAwIDAgMiAyaDE0YTIgMiAw"
+    "IDAgMCAyLTJWNmEyIDIgMCAwIDAtMi0yaC0yVjJoLTJ2Mkg5VjJIN3pNNSA5aDE0djExSDVWOXoiLz48L3N2Zz4="
+)
+
 
 class Planning(models.Model):
     """A named meal plan created by a user (the schema's ``planning`` table).
@@ -13,6 +23,9 @@ class Planning(models.Model):
     """
 
     name = models.CharField(max_length=255)
+    icon = models.TextField(  # noqa: DJ001 (nullable, optional)
+        blank=True, null=True, default=DEFAULT_PLANNING_ICON
+    )
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="plannings"
     )

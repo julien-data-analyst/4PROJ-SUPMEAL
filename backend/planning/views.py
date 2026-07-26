@@ -48,6 +48,16 @@ from .serializers import PlanningSerializer, PlanningWriteSerializer
                 examples=[OpenApiExample("Exemple", value=True)],
             ),
             OpenApiParameter(
+                name="shared_with_me",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "`true` : uniquement les plannings ranges dans un cookbook partage avec "
+                    "l'utilisateur courant (dont il n'est pas le proprietaire). `false` : "
+                    "exclut ces plannings."
+                ),
+                examples=[OpenApiExample("Exemple", value=True)],
+            ),
+            OpenApiParameter(
                 name="page",
                 type=OpenApiTypes.INT,
                 description="Numero de page a retourner.",
