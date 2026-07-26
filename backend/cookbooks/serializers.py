@@ -37,6 +37,7 @@ class CookbookSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "icon",
             "creator",
             "shared_with",
             "recipes",
@@ -52,7 +53,7 @@ class CookbookWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cookbook
-        fields = ["id", "name"]
+        fields = ["id", "name", "icon"]
         read_only_fields = ["id"]
 
     def to_representation(self, instance: Cookbook):  # pyright: ignore[reportIncompatibleMethodOverride]
