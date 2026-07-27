@@ -1,6 +1,7 @@
 {
   "name": "recipe-front",
   "private": true,
+  "type": "module",
   "engines": {
     "node": ">=22"
   },
