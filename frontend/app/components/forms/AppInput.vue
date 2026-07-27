@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import IconEye from "~/components/icons/IconEye.vue";
+import IconEyeOff from "~/components/icons/IconEyeOff.vue";
+
 const props = withDefaults(
   defineProps<{
     modelValue?: string;
@@ -28,15 +31,15 @@ const inputType = computed(() =>
 </script>
 
 <template>
-  <div class="mb-4 flex flex-col gap-1.5">
-    <label v-if="label" :for="id" class="text-[12.5px] font-semibold text-sup-very-gray">
+  <div class="mb-5 flex flex-col gap-2">
+    <label v-if="label" :for="id" class="text-sm font-semibold text-sup-very-gray sm:text-base">
       {{ label }}
     </label>
 
     <div class="relative">
       <span
         v-if="$slots.icon"
-        class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 [&>svg]:h-4 [&>svg]:w-4"
+        class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 [&>svg]:h-5 [&>svg]:w-5"
       >
         <slot name="icon" />
       </span>
@@ -47,10 +50,10 @@ const inputType = computed(() =>
         :value="modelValue"
         :placeholder="placeholder"
         :autocomplete="autocomplete"
-        class="w-full rounded-md border bg-sup-withe px-3 py-2.5 text-[13.5px] text-sup-very-gray placeholder:text-gray-400 focus:outline-none focus:ring-2"
+        class="w-full rounded-md border bg-sup-withe px-4 py-3 text-base text-sup-very-gray placeholder:text-gray-400 focus:outline-none focus:ring-2 sm:py-3.5"
         :class="[
-          $slots.icon ? 'pl-9' : '',
-          isPassword ? 'pr-10' : '',
+          $slots.icon ? 'pl-11' : '',
+          isPassword ? 'pr-12' : '',
           error
             ? 'border-sup-red-error focus:border-sup-red-error focus:ring-sup-red-error/20'
             : 'border-sup-border focus:border-sup-dark-green focus:ring-sup-light-green/30',
@@ -61,42 +64,16 @@ const inputType = computed(() =>
       <button
         v-if="isPassword"
         type="button"
-        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-sup-very-gray"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-sup-very-gray"
         :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
         @click="showPassword = !showPassword"
       >
-        <svg
-          v-if="!showPassword"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="h-4 w-4"
-        >
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-        <svg
-          v-else
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="h-4 w-4"
-        >
-          <path
-            d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.24-1.34a3 3 0 1 1-4.24-4.24"
-          />
-          <path d="M1 1l22 22" />
-        </svg>
+        <IconEye v-if="!showPassword" size="sm" />
+        <IconEyeOff v-else size="sm" />
       </button>
     </div>
 
-    <p v-if="error" class="text-[11.5px] text-sup-red-error">{{ error }}</p>
-    <p v-else-if="hint" class="text-[11.5px] text-gray-400">{{ hint }}</p>
+    <p v-if="error" class="text-sm text-sup-red-error">{{ error }}</p>
+    <p v-else-if="hint" class="text-sm text-gray-400">{{ hint }}</p>
   </div>
 </template>
