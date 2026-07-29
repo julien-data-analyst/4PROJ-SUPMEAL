@@ -21,7 +21,14 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiUrl: "http://localhost:8000/api",
+      apiUrl: `http://localhost:${process.env.BACKEND_PORT || 8000}/api`,
+      azureClientId: process.env.AZURE_CLIENT_ID || "",
+      azureAuthority:
+        process.env.AZURE_AUTHORITY ||
+        "https://login.microsoftonline.com/common/v2.0",
+      azureRedirectUri:
+        process.env.AZURE_REDIRECT_URI ||
+        "http://localhost:3000/connect/microsoft/callback",
     },
   },
 });

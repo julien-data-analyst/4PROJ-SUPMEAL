@@ -32,7 +32,11 @@ const inputType = computed(() =>
 
 <template>
   <div class="mb-5 flex flex-col gap-2">
-    <label v-if="label" :for="id" class="text-sm font-semibold text-sup-very-gray sm:text-base">
+    <label
+      v-if="label"
+      :for="id"
+      class="text-sm font-semibold text-sup-very-gray sm:text-base"
+    >
       {{ label }}
     </label>
 
@@ -58,14 +62,18 @@ const inputType = computed(() =>
             ? 'border-sup-red-error focus:border-sup-red-error focus:ring-sup-red-error/20'
             : 'border-sup-border focus:border-sup-dark-green focus:ring-sup-light-green/30',
         ]"
-        @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+        @input="
+          emit('update:modelValue', ($event.target as HTMLInputElement).value)
+        "
       />
 
       <button
         v-if="isPassword"
         type="button"
         class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-sup-very-gray"
-        :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+        :aria-label="
+          showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+        "
         @click="showPassword = !showPassword"
       >
         <IconEye v-if="!showPassword" size="sm" />

@@ -2,8 +2,15 @@
 import AppLogo from "~/components/AppLogo.vue";
 import AppButton from "~/components/buttons/AppButton.vue";
 import IconCheck from "~/components/icons/IconCheck.vue";
+import { useAuth } from "~/composables/useAuth";
 
 definePageMeta({ layout: false });
+
+const { logout } = useAuth();
+
+onMounted(async () => {
+  await logout();
+});
 </script>
 
 <template>
@@ -29,7 +36,9 @@ definePageMeta({ layout: false });
       </p>
 
       <div class="mt-8 flex flex-col gap-3">
-        <AppButton to="/login" variant="primary" size="lg" block>Se reconnecter</AppButton>
+        <AppButton to="/login" variant="primary" size="lg" block
+          >Se reconnecter</AppButton
+        >
         <NuxtLink
           to="/"
           class="text-sm font-semibold text-sup-dark-green hover:underline sm:text-base"
