@@ -24,6 +24,8 @@ const sizeClasses: Record<string, string> = {
       class="w-auto"
       :class="sizeClasses[size]"
     />
-    <p v-if="tagline" class="text-center text-[13px] text-gray-500">{{ tagline }}</p>
+    <p v-if="tagline" class="text-center text-[13px] text-gray-500">
+      {{ tagline }}
+    </p>
   </div>
 </template>

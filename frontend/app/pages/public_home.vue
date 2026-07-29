@@ -10,17 +10,20 @@ definePageMeta({ layout: false });
 const features = [
   {
     title: "Recettes",
-    description: "Rédigez, éditez et organisez toutes vos recettes au même endroit.",
+    description:
+      "Rédigez, éditez et organisez toutes vos recettes au même endroit.",
     icon: markRaw(IconRecipe),
   },
   {
     title: "Cookbooks",
-    description: "Regroupez vos recettes par thème et partagez-les avec vos proches.",
+    description:
+      "Regroupez vos recettes par thème et partagez-les avec vos proches.",
     icon: markRaw(IconCookbook),
   },
   {
     title: "Planning repas",
-    description: "Planifiez vos repas de la semaine et générez vos listes de courses.",
+    description:
+      "Planifiez vos repas de la semaine et générez vos listes de courses.",
     icon: markRaw(IconCalendar),
   },
 ];
@@ -30,7 +33,9 @@ const features = [
   <div
     class="flex min-h-screen flex-col bg-gradient-to-br from-sup-light-green/10 via-sup-light-gray to-sup-light-gray"
   >
-    <header class="flex items-center justify-between px-6 py-6 sm:px-10 lg:px-16">
+    <header
+      class="flex items-center justify-between px-6 py-6 sm:px-10 lg:px-16"
+    >
       <AppLogo size="sm" />
       <div class="flex items-center gap-3">
         <AppButton to="/login" variant="ghost">Se connecter</AppButton>
@@ -38,7 +43,9 @@ const features = [
       </div>
     </header>
 
-    <main class="flex flex-1 items-center justify-center px-6 py-16 sm:px-10 lg:px-16">
+    <main
+      class="flex flex-1 items-center justify-center px-6 py-16 sm:px-10 lg:px-16"
+    >
       <div class="w-full max-w-5xl text-center">
         <AppLogo size="lg" />
 
@@ -50,15 +57,28 @@ const features = [
         </h1>
 
         <p class="mx-auto mt-6 max-w-2xl text-lg text-gray-500 sm:text-xl">
-          SUPMEAL centralise vos recettes, vos cookbooks et vos plannings de repas pour une
-          organisation culinaire simple, sans effort et accessible partout.
+          SUPMEAL centralise vos recettes, vos cookbooks et vos plannings de
+          repas pour une organisation culinaire simple, sans effort et
+          accessible partout.
         </p>
 
-        <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <AppButton to="/register" variant="primary" size="lg" class="w-full sm:w-auto">
+        <div
+          class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
+        >
+          <AppButton
+            to="/register"
+            variant="primary"
+            size="lg"
+            class="w-full sm:w-auto"
+          >
             Créer un compte gratuitement
           </AppButton>
-          <AppButton to="/login" variant="secondary" size="lg" class="w-full sm:w-auto">
+          <AppButton
+            to="/login"
+            variant="secondary"
+            size="lg"
+            class="w-full sm:w-auto"
+          >
             Se connecter
           </AppButton>
         </div>
@@ -80,7 +100,9 @@ const features = [
           <h2 class="mt-5 text-lg font-bold text-sup-very-gray sm:text-xl">
             {{ feature.title }}
           </h2>
-          <p class="mt-2 text-sm text-gray-500 sm:text-base">{{ feature.description }}</p>
+          <p class="mt-2 text-sm text-gray-500 sm:text-base">
+            {{ feature.description }}
+          </p>
         </div>
       </div>
     </section>

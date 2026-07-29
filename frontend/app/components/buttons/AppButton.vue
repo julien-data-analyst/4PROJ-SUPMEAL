@@ -1,5 +1,6 @@
 <script setup lang="ts">
-type ButtonVariant = "primary" | "secondary" | "destructive" | "ghost" | "oauth";
+type ButtonVariant =
+  "primary" | "secondary" | "destructive" | "ghost" | "oauth";
 type ButtonSize = "sm" | "md" | "lg";
 
 const props = withDefaults(
@@ -21,16 +22,21 @@ const props = withDefaults(
   },
 );
 
-const tag = computed(() => (props.to ? resolveComponent("NuxtLink") : "button"));
+const tag = computed(() =>
+  props.to ? resolveComponent("NuxtLink") : "button",
+);
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
     "border-transparent bg-gradient-to-br from-sup-light-green to-sup-dark-green text-sup-very-gray hover:brightness-105",
   secondary:
     "border-sup-dark-green bg-sup-withe text-sup-dark-green hover:bg-sup-light-green/10",
-  destructive: "border-transparent bg-sup-red-error text-sup-withe hover:brightness-105",
-  ghost: "border-sup-border bg-transparent text-sup-very-gray hover:bg-sup-light-gray",
-  oauth: "border-sup-border bg-sup-withe text-sup-very-gray hover:bg-sup-light-gray",
+  destructive:
+    "border-transparent bg-sup-red-error text-sup-withe hover:brightness-105",
+  ghost:
+    "border-sup-border bg-transparent text-sup-very-gray hover:bg-sup-light-gray",
+  oauth:
+    "border-sup-border bg-sup-withe text-sup-very-gray hover:bg-sup-light-gray",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
