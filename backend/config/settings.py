@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
@@ -83,9 +84,20 @@ SPECTACULAR_SETTINGS = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    # Both lifetimes are 30 minutes and every refresh call issues (and blacklists
+    # the predecessor of) a new refresh token, so the session behaves like a
+    # sliding 30-minute inactivity timeout: any activity before expiry extends
+    # it, but 30 minutes without a refresh call logs the user out.
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(minutes=30),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
+
+CORS_ALLOWED_ORIGINS = env.list(
+    "CORS_ALLOWED_ORIGINS",
+    default=["http://localhost:3000", "http://localhost:3008"],  # pyright: ignore[reportArgumentType]
+)
 
 AZURE_CLIENT_ID = env("AZURE_CLIENT_ID", default="")  # pyright: ignore[reportArgumentType]
 AZURE_TENANT_ID = env("AZURE_TENANT_ID", default="")  # pyright: ignore[reportArgumentType]
@@ -98,6 +110,7 @@ AZURE_AUTHORITY = env(
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
