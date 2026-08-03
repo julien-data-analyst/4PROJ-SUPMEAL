@@ -41,7 +41,9 @@ const onConfirm = async () => {
       <div
         class="w-full max-w-[460px] max-h-[90vh] overflow-auto rounded-[14px] bg-sup-withe shadow-md"
       >
-        <div class="flex items-center justify-between border-b border-sup-border px-5 py-[18px]">
+        <div
+          class="flex items-center justify-between border-b border-sup-border px-5 py-[18px]"
+        >
           <p class="text-[16px] font-semibold text-sup-very-gray">
             Supprimer la recette
           </p>
@@ -79,7 +81,9 @@ const onConfirm = async () => {
           </div>
         </div>
 
-        <div class="flex justify-end gap-[10px] border-t border-sup-border px-5 py-4">
+        <div
+          class="flex justify-end gap-[10px] border-t border-sup-border px-5 py-4"
+        >
           <AppButton variant="ghost" @click="emit('close')">
             Annuler
           </AppButton>

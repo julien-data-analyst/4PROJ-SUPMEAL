@@ -58,7 +58,9 @@ const send = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col rounded-[14px] border border-sup-border bg-sup-withe p-[18px] shadow-sm">
+  <div
+    class="flex flex-col rounded-[14px] border border-sup-border bg-sup-withe p-[18px] shadow-sm"
+  >
     <p class="mb-3 text-[14.5px] font-bold text-sup-very-gray">
       Discussion sur cette recette
     </p>
