@@ -273,7 +273,7 @@ export function useRecipes() {
   const fetchMyRecipes = (search = "") =>
     store.fetchRecipes({ in_cookbook: false, name: search || undefined });
 
-  const fetchRecentRecipes = async (limit = 3): Promise<Recipe[]> => {
+  const fetchRecentRecipes = async (limit = 3): Promise<void> => {
     await store.fetchRecipes({
       in_cookbook: false,
       page_size: limit,
