@@ -137,7 +137,7 @@ RECIPE_EXPORT_EXAMPLE = {
             OpenApiParameter(
                 name="name",
                 type=OpenApiTypes.STR,
-                description="Recherche plein texte (PostgreSQL) sur le titre de la recette.",
+                description="Correspondance partielle sur le titre de la recette.",
                 examples=[OpenApiExample("Exemple", value="crepes")],
             ),
             OpenApiParameter(
@@ -257,8 +257,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return (
             Recipe.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
-                models.Q(cookbook__isnull=True)  # pyright: ignore[reportOperatorIssue]
-                | models.Q(creator=user)
+                models.Q(creator=user)  # pyright: ignore[reportOperatorIssue]
                 | models.Q(cookbook__creator=user)
                 | models.Q(cookbook__shared_with__user=user)
             )

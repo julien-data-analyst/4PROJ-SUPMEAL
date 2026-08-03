@@ -1,3 +1,12 @@
+<script setup lang="ts">
+import RecipeEditor from "~/components/recipes/RecipeEditor.vue";
+
+definePageMeta({ layout: "app" });
+
+const route = useRoute();
+const recipeId = computed(() => Number(route.params.id));
+</script>
+
 <template>
-  <div class="p-8 text-sup-very-gray">Page « Recette (édition) » à venir.</div>
+  <RecipeEditor mode="edit" :recipe-id="recipeId" />
 </template>
