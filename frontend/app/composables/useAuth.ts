@@ -9,6 +9,7 @@ export interface User {
   last_name: string;
   email: string;
   profile_icon: string;
+  is_oauth: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -48,8 +49,20 @@ export const useAuth = () => {
     }
   };
 
+  // Merges a partial user update (e.g. from a settings change) into the
+  // current session and re-persists it, without touching the tokens.
+  const updateUser = (patch: Partial<User>) => {
+    if (!user.value) return;
+    user.value = { ...user.value, ...patch };
+    if (import.meta.client) {
+      localStorage.setItem("user", JSON.stringify(user.value));
+    }
+  };
+
   // Clears local session state only, without calling the backend - used
-  // when the stored refresh token turns out to already be invalid/expired.
+  // when the stored refresh token turns out to already be invalid/expired,
+  // or after the account itself has just been deleted (its tokens are dead,
+  // so there's nothing left to revoke via `/logout/`).
   const clearSession = () => {
     user.value = null;
     access.value = null;
@@ -166,5 +179,7 @@ export const useAuth = () => {
     initAuth,
     refreshSession,
     setSession,
+    updateUser,
+    clearSession,
   };
 };

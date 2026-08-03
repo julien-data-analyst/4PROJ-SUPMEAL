@@ -5,53 +5,23 @@ import IconStar from "~/components/icons/IconStar.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
 import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
-import { useRecipeStore } from "~/stores/useRecipeStore";
-import {
-  useRecipes,
-  renderStepMarkdown,
-  formatCookingDuration,
-  sumStepMinutes,
-} from "~/composables/useRecipes";
-import { useAuth } from "~/composables/useAuth";
+import { useRecipeView } from "~/composables/useRecipesEditView";
 
 definePageMeta({ layout: "app" });
 
-const route = useRoute();
-const recipeId = Number(route.params.id);
+const recipeId = Number(useRoute().params.id);
 
-const store = useRecipeStore();
-const { toggleFavorite } = useRecipes();
-const { user } = useAuth();
-
-const isLoading = ref(true);
-const deleteModalOpen = ref(false);
-
-onMounted(async () => {
-  isLoading.value = true;
-  try {
-    await store.fetchRecipe(recipeId);
-  } finally {
-    isLoading.value = false;
-  }
-});
-
-const recipe = computed(() => store.currentRecipe);
-const isOwner = computed(
-  () => !!recipe.value && recipe.value.creator.id === user.value?.id,
-);
-const totalPrepMinutes = computed(() =>
-  recipe.value ? sumStepMinutes(recipe.value.steps) : 0,
-);
-
-const onToggleFavorite = () => {
-  if (recipe.value) toggleFavorite(recipe.value);
-};
-
-const confirmDelete = async () => {
-  await store.deleteRecipe(recipeId);
-  deleteModalOpen.value = false;
-  await navigateTo("/recipes");
-};
+const {
+  isLoading,
+  deleteModalOpen,
+  recipe,
+  isOwner,
+  totalPrepMinutes,
+  onToggleFavorite,
+  confirmDelete,
+  formatCookingDuration,
+  renderStepMarkdown,
+} = useRecipeView(recipeId);
 </script>
 
 <template>
