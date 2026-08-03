@@ -4,7 +4,7 @@ import pytest
 from rest_framework.response import Response
 from rest_framework.test import APIClient as _APIClient
 
-from users.models import User
+from users.models import OAuthUser, User
 
 ##################################-
 # Fixtures for user-related tests
@@ -90,6 +90,18 @@ def auth_client(api_client: APIClient, regular_user: User) -> APIClient:
 def staff_client(api_client: APIClient, staff_user: User) -> APIClient:
     api_client.force_authenticate(user=staff_user)
     return api_client
+
+
+@pytest.fixture
+def oauth_user(make_user) -> User:
+    user = make_user(username="msuser", email="msuser@contoso.com")
+    OAuthUser.objects.create(  # pyright: ignore[reportAttributeAccessIssue]
+        provider="microsoft",
+        provider_url="https://login.microsoftonline.com/common/v2.0",
+        domain="contoso.com",
+        user=user,
+    )
+    return user
 
 
 #################################

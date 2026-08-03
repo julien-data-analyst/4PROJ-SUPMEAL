@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from tests.users.conftest import APIClient
-from users.models import OAuthUser, User
+from users.models import User
 
 pytestmark = pytest.mark.django_db
 
@@ -79,14 +79,7 @@ def test_change_password_rejects_get_requests(auth_client: APIClient):
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
 
-def test_oauth_user_cannot_change_password(api_client: APIClient, make_user):
-    oauth_user = make_user(username="msuser", email="msuser@contoso.com")
-    OAuthUser.objects.create(  # pyright: ignore[reportAttributeAccessIssue]
-        provider="microsoft",
-        provider_url="https://login.microsoftonline.com/common/v2.0",
-        domain="contoso.com",
-        user=oauth_user,
-    )
+def test_oauth_user_cannot_change_password(api_client: APIClient, oauth_user: User):
     api_client.force_authenticate(user=oauth_user)
     url = reverse("change-password")
 

@@ -3,6 +3,8 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
+    ChangeAvatarView,
+    ChangeEmailView,
     ChangePasswordView,
     LoginView,
     LogoutView,
@@ -20,6 +22,8 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="user-logout"),
     path("oauth/microsoft/", MicrosoftOAuthView.as_view(), name="oauth-microsoft"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
+    path("change-email/", ChangeEmailView.as_view(), name="change-email"),
+    path("change-avatar/", ChangeAvatarView.as_view(), name="change-avatar"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("", include(router.urls)),
 ]

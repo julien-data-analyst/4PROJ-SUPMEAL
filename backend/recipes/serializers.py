@@ -2,6 +2,7 @@ from django.db import transaction
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from common.image_validation import validate_image_data_uri
 from cookbooks.permissions import has_rank
 from users.serializers import UserSerializer
 
@@ -145,6 +146,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             "steps",
         ]
         read_only_fields = ["id"]
+
+    def validate_image(self, value: str | None) -> str | None:
+        validate_image_data_uri(value)
+        return value
 
     def validate_cookbook(self, cookbook):
         if cookbook is None:

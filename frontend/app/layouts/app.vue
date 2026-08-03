@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppSidebar from "~/components/layout/AppSidebar.vue";
+import ToastContainer from "~/components/common/ToastContainer.vue";
 </script>
 
 <template>
@@ -10,5 +11,6 @@ import AppSidebar from "~/components/layout/AppSidebar.vue";
     <main class="min-w-0 flex-1 px-8 pb-[60px] pt-[26px]">
       <slot />
     </main>
+    <ToastContainer />
   </div>
 </template>
