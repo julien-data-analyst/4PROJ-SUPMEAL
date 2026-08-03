@@ -257,8 +257,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return (
             Recipe.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
-                models.Q(cookbook__isnull=True)  # pyright: ignore[reportOperatorIssue]
-                | models.Q(creator=user)
+                models.Q(creator=user)  # pyright: ignore[reportOperatorIssue]
                 | models.Q(cookbook__creator=user)
                 | models.Q(cookbook__shared_with__user=user)
             )
