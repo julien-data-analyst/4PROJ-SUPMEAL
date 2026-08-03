@@ -90,6 +90,15 @@ export function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+// Mirrors the backend's common.image_validation.ALLOWED_IMAGE_MIME_TYPES -
+// the server independently sniffs the actual bytes, this is just the fast
+// client-side check to reject the wrong type before it's ever uploaded.
+export const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/svg+xml"];
+
+export function isAllowedImageFile(file: File): boolean {
+  return ALLOWED_IMAGE_TYPES.includes(file.type);
+}
+
 export function relativeTime(dateStr: string): string {
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return "";

@@ -12,216 +12,38 @@ import IngredientsPanel from "~/components/recipes/IngredientsPanel.vue";
 import TagsPanel from "~/components/recipes/TagsPanel.vue";
 import DiscussionPanel from "~/components/recipes/DiscussionPanel.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
-import { useRecipeStore } from "~/stores/useRecipeStore";
-import type { RecipeWritePayload } from "~/stores/useRecipeStore";
-import {
-  emptyStepLine,
-  fileToDataUrl,
-  minutesToDury,
-  recipeToIngredientLines,
-  recipeToStepLines,
-  recipeToTagLines,
-  relativeTime,
-  formatCookingDuration,
-} from "~/composables/useRecipes";
-import type {
-  IngredientLine,
-  StepLine,
-  TagLine,
-} from "~/composables/useRecipes";
+import { useRecipeEditForm } from "~/composables/useRecipesEditView";
 
 const props = defineProps<{
   mode: "create" | "edit";
   recipeId?: number;
 }>();
 
-const store = useRecipeStore();
-
-const title = ref("");
-const source = ref("");
-const cookingDuration = ref("");
-const image = ref<string | null>(null);
-
-const ingredientLines = ref<IngredientLine[]>([]);
-const tagLines = ref<TagLine[]>([]);
-const stepLines = ref<StepLine[]>([emptyStepLine()]);
-
-const previewMode = ref(false);
-const isLoading = ref(props.mode === "edit");
-const isSaving = ref(false);
-const saveError = ref("");
-const savedNotice = ref(false);
-const deleteModalOpen = ref(false);
-const isDeleting = ref(false);
-
-const currentRecipe = computed(() => store.currentRecipe);
-
-// Live counter - sum of every step's duration plus the cooking duration,
-// updated as the user edits either.
-const totalMinutes = computed(() => {
-  const stepsTotal = stepLines.value.reduce(
-    (sum, s) => sum + (Number(s.durationMinutes) || 0),
-    0,
-  );
-  return stepsTotal + (Number(cookingDuration.value) || 0);
-});
-
-const loadRecipe = async () => {
-  if (props.mode !== "edit" || !props.recipeId) return;
-  isLoading.value = true;
-  try {
-    const recipe = await store.fetchRecipe(props.recipeId);
-    title.value = recipe.title;
-    source.value = recipe.source ?? "";
-    cookingDuration.value = recipe.cooking_duration ?? "";
-    image.value = recipe.image;
-    ingredientLines.value = recipeToIngredientLines(recipe);
-    tagLines.value = recipeToTagLines(recipe);
-    stepLines.value = recipeToStepLines(recipe).length
-      ? recipeToStepLines(recipe)
-      : [emptyStepLine()];
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-onMounted(loadRecipe);
-
-const onImageChange = async (event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (!file) return;
-  image.value = await fileToDataUrl(file);
-};
-
-const addStep = () => {
-  stepLines.value = [...stepLines.value, emptyStepLine()];
-};
-
-const removeStep = (index: number) => {
-  stepLines.value = stepLines.value.filter((_, i) => i !== index);
-  if (!stepLines.value.length) stepLines.value = [emptyStepLine()];
-};
-
-const moveStep = (index: number, direction: -1 | 1) => {
-  const target = index + direction;
-  if (target < 0 || target >= stepLines.value.length) return;
-  const next = [...stepLines.value];
-  const [moved] = next.splice(index, 1);
-  if (!moved) return;
-  next.splice(target, 0, moved);
-  stepLines.value = next;
-};
-
-const validate = (): string | null => {
-  if (!title.value.trim()) return "Le titre de la recette est obligatoire.";
-
-  const usedIngredientNames = new Set<string>();
-  for (const line of ingredientLines.value) {
-    if (!line.name.trim()) continue;
-    if (!line.ingredientId && !line.image) {
-      return `L'ingrédient « ${line.name} » est nouveau : une image est obligatoire.`;
-    }
-    if (!line.quantity || Number(line.quantity) <= 0) {
-      return `Indiquez une quantité pour « ${line.name} ».`;
-    }
-    if (!line.personNumbers || Number(line.personNumbers) < 1) {
-      return `Indiquez un nombre de personnes pour « ${line.name} ».`;
-    }
-    const key = line.name.trim().toLowerCase();
-    if (usedIngredientNames.has(key)) {
-      return `L'ingrédient « ${line.name} » est ajouté plusieurs fois.`;
-    }
-    usedIngredientNames.add(key);
-  }
-
-  const usedTagNames = new Set<string>();
-  for (const tag of tagLines.value) {
-    if (!tag.name.trim()) continue;
-    const key = tag.name.trim().toLowerCase();
-    if (usedTagNames.has(key)) {
-      return `Le tag « ${tag.name} » est ajouté plusieurs fois.`;
-    }
-    usedTagNames.add(key);
-  }
-
-  return null;
-};
-
-const buildPayload = (): RecipeWritePayload => ({
-  title: title.value.trim(),
-  image: image.value || null,
-  source: source.value.trim() || null,
-  cooking_duration: cookingDuration.value
-    ? Number(cookingDuration.value)
-    : null,
-  ingredients: ingredientLines.value
-    .filter((l) => l.name.trim())
-    .map((l) => ({
-      name: l.name.trim(),
-      image: l.image || null,
-      quantity: Number(l.quantity) || 0,
-      unity: l.unity.trim() || null,
-      person_numbers: Number(l.personNumbers) || 1,
-    })),
-  tags: tagLines.value
-    .filter((t) => t.name.trim())
-    .map((t) => ({
-      name: t.name.trim(),
-      type: t.type,
-      description: t.description.trim() || null,
-    })),
-  steps: stepLines.value
-    .filter((s) => s.description.trim())
-    .map((s, i) => ({
-      description: s.description,
-      step_number: i + 1,
-      dury: minutesToDury(s.durationMinutes),
-      type: s.type,
-    })),
-});
-
-const save = async () => {
-  saveError.value = "";
-  savedNotice.value = false;
-  const error = validate();
-  if (error) {
-    saveError.value = error;
-    return;
-  }
-
-  isSaving.value = true;
-  try {
-    const payload = buildPayload();
-    if (props.mode === "create") {
-      const recipe = await store.createRecipe(payload);
-      await navigateTo(`/recipes/${recipe.id}/edit`);
-    } else if (props.recipeId) {
-      await store.updateRecipe(props.recipeId, payload);
-      savedNotice.value = true;
-      setTimeout(() => (savedNotice.value = false), 2500);
-    }
-  } catch {
-    saveError.value =
-      "Impossible d'enregistrer la recette. Vérifiez les champs et réessayez.";
-  } finally {
-    isSaving.value = false;
-  }
-};
-
-const confirmDelete = async () => {
-  if (!props.recipeId || isDeleting.value) return;
-  isDeleting.value = true;
-  try {
-    await store.deleteRecipe(props.recipeId);
-    deleteModalOpen.value = false;
-    await navigateTo("/recipes");
-  } catch {
-    saveError.value = "Impossible de supprimer la recette.";
-    deleteModalOpen.value = false;
-  } finally {
-    isDeleting.value = false;
-  }
-};
+const {
+  title,
+  source,
+  cookingDuration,
+  image,
+  ingredientLines,
+  tagLines,
+  stepLines,
+  previewMode,
+  isLoading,
+  isSaving,
+  saveError,
+  savedNotice,
+  deleteModalOpen,
+  currentRecipe,
+  totalMinutes,
+  onImageChange,
+  addStep,
+  removeStep,
+  moveStep,
+  save,
+  confirmDelete,
+  relativeTime,
+  formatCookingDuration,
+} = useRecipeEditForm(props);
 </script>
 
 <template>
@@ -278,7 +100,7 @@ const confirmDelete = async () => {
           <IconCamera v-else size="sm" />
           <input
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/svg+xml"
             class="hidden"
             @change="onImageChange"
           />

@@ -38,6 +38,21 @@ def test_owner_can_create_recipe_with_ingredients_tags_and_steps(
     assert Step.objects.filter(recipe=recipe).count() == 2  # pyright: ignore[reportAttributeAccessIssue]
 
 
+def test_creating_recipe_rejects_disallowed_image_type(auth_client: APIClient):
+    """Test that a recipe image must be a PNG/JPEG/SVG data URI (see
+    common.image_validation.validate_image_data_uri)."""
+    url = reverse("recipe-list")
+
+    response = auth_client.post(
+        url,
+        {"title": "Mauvaise image", "image": "data:image/gif;base64,R0lGODlhAQABAAAAACw="},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert not Recipe.objects.filter(title="Mauvaise image").exists()  # pyright: ignore[reportAttributeAccessIssue]
+
+
 def test_owner_can_create_recipe_without_optional_nested_fields(auth_client: APIClient):
     """Test that ingredients/tags/steps are optional when creating a recipe."""
     url = reverse("recipe-list")

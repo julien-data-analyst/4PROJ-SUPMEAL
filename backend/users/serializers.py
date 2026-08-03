@@ -3,10 +3,14 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
+from common.image_validation import validate_image_data_uri
+
 from .models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
+    is_oauth = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -16,10 +20,14 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "profile_icon",
+            "is_oauth",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "email", "profile_icon", "created_at", "updated_at"]
+
+    def get_is_oauth(self, obj: User) -> bool:
+        return obj.oauth_accounts.exists()  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -62,6 +70,33 @@ class ChangePasswordSerializer(serializers.Serializer):
 
         if not user.check_password(attrs["current_password"]):
             raise serializers.ValidationError("Current password is incorrect.")
+
+        return attrs
+
+
+class ChangeEmailSerializer(serializers.Serializer):
+    new_email = serializers.EmailField()
+
+    def validate(self, attrs: dict) -> dict:
+        user = self.context["request"].user
+
+        if user.oauth_accounts.exists():
+            raise serializers.ValidationError("OAuth accounts cannot change their email here.")
+
+        if User.objects.exclude(pk=user.pk).filter(email__iexact=attrs["new_email"]).exists():
+            raise serializers.ValidationError("This email is already in use.")
+
+        return attrs
+
+
+class ChangeAvatarSerializer(serializers.Serializer):
+    avatar = serializers.CharField(validators=[validate_image_data_uri])
+
+    def validate(self, attrs: dict) -> dict:
+        user = self.context["request"].user
+
+        if user.oauth_accounts.exists():
+            raise serializers.ValidationError("OAuth accounts cannot change their avatar here.")
 
         return attrs
 
