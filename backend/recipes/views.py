@@ -137,7 +137,7 @@ RECIPE_EXPORT_EXAMPLE = {
             OpenApiParameter(
                 name="name",
                 type=OpenApiTypes.STR,
-                description="Correspondance partielle insensible à la casse sur le titre de la recette.",
+                description="Correspondance partielle sur le titre de la recette.",
                 examples=[OpenApiExample("Exemple", value="crepes")],
             ),
             OpenApiParameter(
