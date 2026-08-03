@@ -24,7 +24,11 @@ import {
   relativeTime,
   formatCookingDuration,
 } from "~/composables/useRecipes";
-import type { IngredientLine, StepLine, TagLine } from "~/composables/useRecipes";
+import type {
+  IngredientLine,
+  StepLine,
+  TagLine,
+} from "~/composables/useRecipes";
 
 const props = defineProps<{
   mode: "create" | "edit";
@@ -147,7 +151,9 @@ const buildPayload = (): RecipeWritePayload => ({
   title: title.value.trim(),
   image: image.value || null,
   source: source.value.trim() || null,
-  cooking_duration: cookingDuration.value ? Number(cookingDuration.value) : null,
+  cooking_duration: cookingDuration.value
+    ? Number(cookingDuration.value)
+    : null,
   ingredients: ingredientLines.value
     .filter((l) => l.name.trim())
     .map((l) => ({
@@ -195,7 +201,8 @@ const save = async () => {
       setTimeout(() => (savedNotice.value = false), 2500);
     }
   } catch {
-    saveError.value = "Impossible d'enregistrer la recette. Vérifiez les champs et réessayez.";
+    saveError.value =
+      "Impossible d'enregistrer la recette. Vérifiez les champs et réessayez.";
   } finally {
     isSaving.value = false;
   }
@@ -229,7 +236,11 @@ const confirmDelete = async () => {
       </NuxtLink>
 
       <div class="flex flex-wrap items-center gap-[10px]">
-        <AppButton type="button" variant="secondary" @click="previewMode = !previewMode">
+        <AppButton
+          type="button"
+          variant="secondary"
+          @click="previewMode = !previewMode"
+        >
           <template #icon><IconEye size="xs" /></template>
           {{ previewMode ? "Édition" : "Aperçu" }}
         </AppButton>
@@ -255,10 +266,22 @@ const confirmDelete = async () => {
 
     <template v-else>
       <div class="mb-4 flex items-start gap-4">
-        <label class="group relative flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-sup-border bg-sup-light-gray text-gray-400">
-          <img v-if="image" :src="image" alt="" class="h-full w-full object-cover" />
+        <label
+          class="group relative flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-sup-border bg-sup-light-gray text-gray-400"
+        >
+          <img
+            v-if="image"
+            :src="image"
+            alt=""
+            class="h-full w-full object-cover"
+          />
           <IconCamera v-else size="sm" />
-          <input type="file" accept="image/*" class="hidden" @change="onImageChange" />
+          <input
+            type="file"
+            accept="image/*"
+            class="hidden"
+            @change="onImageChange"
+          />
         </label>
 
         <div class="flex-1">
@@ -275,9 +298,13 @@ const confirmDelete = async () => {
               {{ currentRecipe?.cookbook ? "Dans un cookbook" : "Personnel" }}
             </span>
             <span v-if="currentRecipe" class="text-[12.5px] text-gray-400">
-              Dernière modification : {{ relativeTime(currentRecipe.updated_at) }}
+              Dernière modification :
+              {{ relativeTime(currentRecipe.updated_at) }}
             </span>
-            <span v-if="savedNotice" class="text-[12.5px] font-semibold text-sup-dark-green">
+            <span
+              v-if="savedNotice"
+              class="text-[12.5px] font-semibold text-sup-dark-green"
+            >
               Enregistré ✓
             </span>
           </div>
@@ -299,7 +326,10 @@ const confirmDelete = async () => {
             placeholder="Durée de cuisson (minutes)"
             class="w-full rounded-md border border-sup-border bg-sup-withe px-3 py-[9px] text-[13.5px] text-sup-very-gray focus:border-sup-dark-green focus:outline-none focus:ring-2 focus:ring-sup-light-green/30"
           />
-          <span v-if="cookingDuration" class="shrink-0 text-[12.5px] text-gray-400">
+          <span
+            v-if="cookingDuration"
+            class="shrink-0 text-[12.5px] text-gray-400"
+          >
             {{ formatCookingDuration(cookingDuration) }}
           </span>
         </div>
@@ -313,7 +343,10 @@ const confirmDelete = async () => {
         Temps total estimé : {{ formatCookingDuration(totalMinutes) }}
       </div>
 
-      <p v-if="saveError" class="mb-4 rounded-md bg-sup-red-error/10 px-4 py-3 text-[13px] text-sup-red-error">
+      <p
+        v-if="saveError"
+        class="mb-4 rounded-md bg-sup-red-error/10 px-4 py-3 text-[13px] text-sup-red-error"
+      >
         {{ saveError }}
       </p>
 
@@ -331,7 +364,10 @@ const confirmDelete = async () => {
             :index="index"
             :total="stepLines.length"
             :preview-mode="previewMode"
-            @update:model-value="(v) => (stepLines = stepLines.map((s, i) => (i === index ? v : s)))"
+            @update:model-value="
+              (v) =>
+                (stepLines = stepLines.map((s, i) => (i === index ? v : s)))
+            "
             @remove="removeStep(index)"
             @move-up="moveStep(index, -1)"
             @move-down="moveStep(index, 1)"

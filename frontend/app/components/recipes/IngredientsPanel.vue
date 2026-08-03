@@ -34,7 +34,9 @@ const excludeIngredientIds = (line: IngredientLine): number[] =>
 </script>
 
 <template>
-  <div class="rounded-[14px] border border-sup-border bg-sup-withe p-[18px] shadow-sm">
+  <div
+    class="rounded-[14px] border border-sup-border bg-sup-withe p-[18px] shadow-sm"
+  >
     <div class="mb-3 flex items-center justify-between gap-2">
       <p class="text-[14.5px] font-bold text-sup-very-gray">Ingrédients</p>
       <label class="flex items-center gap-1.5 text-[11px] text-gray-400">
@@ -56,7 +58,9 @@ const excludeIngredientIds = (line: IngredientLine): number[] =>
         :model-value="line"
         :is-duplicate="isDuplicate(line)"
         :exclude-ingredient-ids="excludeIngredientIds(line)"
-        @update:model-value="(v) => (lines = lines.map((l) => (l.key === line.key ? v : l)))"
+        @update:model-value="
+          (v) => (lines = lines.map((l) => (l.key === line.key ? v : l)))
+        "
         @remove="removeLine(line.key)"
       />
     </div>

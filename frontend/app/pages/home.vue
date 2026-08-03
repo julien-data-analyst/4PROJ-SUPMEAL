@@ -26,7 +26,8 @@ onMounted(async () => {
 // favoriting/deleting a card here reactively re-sorts/shrinks this list too.
 const recentRecipes = computed(() => {
   const byDate = [...store.recipes].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
   return sortFavoritesFirst(byDate);
 });

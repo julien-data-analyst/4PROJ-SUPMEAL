@@ -64,8 +64,14 @@ const menuItemClasses =
 </script>
 
 <template>
-  <div class="relative flex flex-col overflow-hidden rounded-[10px] border border-sup-border bg-sup-withe transition hover:-translate-y-px hover:shadow-md">
-    <NuxtLink :to="to" class="absolute inset-0 z-0" :aria-label="recipe.title" />
+  <div
+    class="relative flex flex-col overflow-hidden rounded-[10px] border border-sup-border bg-sup-withe transition hover:-translate-y-px hover:shadow-md"
+  >
+    <NuxtLink
+      :to="to"
+      class="absolute inset-0 z-0"
+      :aria-label="recipe.title"
+    />
 
     <div
       class="flex h-[110px] w-full items-center justify-center overflow-hidden"
@@ -84,7 +90,9 @@ const menuItemClasses =
       <p class="mb-[3px] truncate text-[13px] font-semibold text-sup-very-gray">
         {{ recipe.title }}
       </p>
-      <div class="flex items-center justify-between gap-1.5 text-[11px] text-gray-400">
+      <div
+        class="flex items-center justify-between gap-1.5 text-[11px] text-gray-400"
+      >
         <span class="flex items-center gap-1">
           {{ relativeTime(recipe.updated_at) }}
           <button
@@ -100,7 +108,10 @@ const menuItemClasses =
         <span>{{ recipe.cookbook ? "Cookbook" : "Recette" }}</span>
       </div>
 
-      <div v-if="tagsExpanded && recipe.tags.length" class="mt-1.5 flex flex-wrap gap-1">
+      <div
+        v-if="tagsExpanded && recipe.tags.length"
+        class="mt-1.5 flex flex-wrap gap-1"
+      >
         <span
           v-for="tag in recipe.tags"
           :key="tag.id"
@@ -117,7 +128,9 @@ const menuItemClasses =
       class="absolute left-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-sup-withe/90 shadow-sm transition hover:bg-sup-withe disabled:opacity-60"
       :class="recipe.is_favorite ? 'text-sup-dark-green' : 'text-gray-400'"
       :disabled="isFavoriteBusy"
-      :title="recipe.is_favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+      :title="
+        recipe.is_favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'
+      "
       @click.stop.prevent="onToggleFavorite"
     >
       <IconBookmark size="xs" :filled="recipe.is_favorite" />
@@ -139,15 +152,27 @@ const menuItemClasses =
         class="absolute right-0 top-full mt-1 w-36 overflow-hidden rounded-md border border-sup-border bg-sup-withe py-1 shadow-lg"
         @click.stop
       >
-        <NuxtLink :to="`/recipes/${recipe.id}/view`" :class="menuItemClasses" @click="menuOpen = false">
+        <NuxtLink
+          :to="`/recipes/${recipe.id}/view`"
+          :class="menuItemClasses"
+          @click="menuOpen = false"
+        >
           <IconEye size="xs" />
           Vue
         </NuxtLink>
-        <NuxtLink :to="`/recipes/${recipe.id}/edit`" :class="menuItemClasses" @click="menuOpen = false">
+        <NuxtLink
+          :to="`/recipes/${recipe.id}/edit`"
+          :class="menuItemClasses"
+          @click="menuOpen = false"
+        >
           <IconEdit size="xs" />
           Modifier
         </NuxtLink>
-        <button type="button" :class="[menuItemClasses, 'text-sup-red-error']" @click.prevent="openDeleteModal">
+        <button
+          type="button"
+          :class="[menuItemClasses, 'text-sup-red-error']"
+          @click.prevent="openDeleteModal"
+        >
           <IconTrash size="xs" />
           Supprimer
         </button>

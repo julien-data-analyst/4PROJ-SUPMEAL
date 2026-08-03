@@ -170,9 +170,7 @@ export const useRecipeStore = defineStore("recipes", () => {
     }
   };
 
-  const createRecipe = async (
-    payload: RecipeWritePayload,
-  ): Promise<Recipe> => {
+  const createRecipe = async (payload: RecipeWritePayload): Promise<Recipe> => {
     const recipe = await post<Recipe>(
       "/recipes/",
       payload as unknown as Record<string, unknown>,
@@ -190,7 +188,9 @@ export const useRecipeStore = defineStore("recipes", () => {
       `/recipes/${id}/`,
       payload as unknown as Record<string, unknown>,
     );
-    recipes.value = recipes.value.map((r: Recipe) => (r.id === id ? recipe : r));
+    recipes.value = recipes.value.map((r: Recipe) =>
+      r.id === id ? recipe : r,
+    );
     currentRecipe.value = recipe;
     return recipe;
   };

@@ -72,7 +72,9 @@ const confirmDelete = async () => {
           :class="recipe.is_favorite ? 'text-sup-yellow-warning!' : ''"
           @click="onToggleFavorite"
         >
-          <template #icon><IconStar size="xs" :filled="recipe.is_favorite" /></template>
+          <template #icon
+            ><IconStar size="xs" :filled="recipe.is_favorite"
+          /></template>
           {{ recipe.is_favorite ? "Favori" : "Ajouter aux favoris" }}
         </AppButton>
         <button
@@ -84,7 +86,11 @@ const confirmDelete = async () => {
         >
           <IconTrash size="xs" />
         </button>
-        <AppButton v-if="isOwner" variant="primary" :to="`/recipes/${recipeId}/edit`">
+        <AppButton
+          v-if="isOwner"
+          variant="primary"
+          :to="`/recipes/${recipeId}/edit`"
+        >
           Modifier
         </AppButton>
       </div>
@@ -96,7 +102,10 @@ const confirmDelete = async () => {
 
     <template v-else-if="recipe">
       <div class="mb-4">
-        <div v-if="recipe.image" class="mb-3 h-56 w-full overflow-hidden rounded-md">
+        <div
+          v-if="recipe.image"
+          class="mb-3 h-56 w-full overflow-hidden rounded-md"
+        >
           <a
             v-if="recipe.source"
             :href="recipe.source"
@@ -105,18 +114,34 @@ const confirmDelete = async () => {
             :title="`Ouvrir la source : ${recipe.source}`"
             class="block h-full w-full"
           >
-            <img :src="recipe.image" :alt="recipe.title" class="h-full w-full object-cover transition hover:brightness-95" />
+            <img
+              :src="recipe.image"
+              :alt="recipe.title"
+              class="h-full w-full object-cover transition hover:brightness-95"
+            />
           </a>
-          <img v-else :src="recipe.image" :alt="recipe.title" class="h-full w-full object-cover" />
+          <img
+            v-else
+            :src="recipe.image"
+            :alt="recipe.title"
+            class="h-full w-full object-cover"
+          />
         </div>
         <h1 class="mb-[6px] text-[24px] font-semibold text-sup-very-gray">
           {{ recipe.title }}
         </h1>
-        <div class="flex flex-wrap items-center gap-2 text-[12.5px] text-gray-400">
-          <span class="inline-flex items-center rounded-full border border-sup-border bg-sup-withe px-[10px] py-[3px] text-[11px] font-semibold text-gray-400">
+        <div
+          class="flex flex-wrap items-center gap-2 text-[12.5px] text-gray-400"
+        >
+          <span
+            class="inline-flex items-center rounded-full border border-sup-border bg-sup-withe px-[10px] py-[3px] text-[11px] font-semibold text-gray-400"
+          >
             {{ recipe.cookbook ? "Dans un cookbook" : "Personnel" }}
           </span>
-          <span>par {{ recipe.creator.first_name || recipe.creator.username }}</span>
+          <span
+            >par
+            {{ recipe.creator.first_name || recipe.creator.username }}</span
+          >
           <span v-if="totalPrepMinutes > 0">
             · Préparation : {{ formatCookingDuration(totalPrepMinutes) }}
           </span>
@@ -153,7 +178,11 @@ const confirmDelete = async () => {
               Ingrédients
             </h2>
             <ul class="flex flex-col gap-2 text-[13.5px] text-sup-very-gray">
-              <li v-for="line in recipe.ingredients" :key="line.ingredient.id" class="flex items-center gap-2">
+              <li
+                v-for="line in recipe.ingredients"
+                :key="line.ingredient.id"
+                class="flex items-center gap-2"
+              >
                 <img
                   v-if="line.ingredient.image"
                   :src="line.ingredient.image"
@@ -162,23 +191,34 @@ const confirmDelete = async () => {
                 <span>
                   {{ line.quantity }}{{ line.unity ? ` ${line.unity}` : "" }}
                   {{ line.ingredient.name }}
-                  <span class="text-[11px] text-gray-400">({{ line.person_numbers }} pers.)</span>
+                  <span class="text-[11px] text-gray-400"
+                    >({{ line.person_numbers }} pers.)</span
+                  >
                 </span>
               </li>
-              <li v-if="!recipe.ingredients.length" class="text-[12px] text-gray-400">
+              <li
+                v-if="!recipe.ingredients.length"
+                class="text-[12px] text-gray-400"
+              >
                 Aucun ingrédient renseigné.
               </li>
             </ul>
           </div>
 
           <div>
-            <h2 class="mb-[10px] text-[17px] font-bold text-sup-dark-green">Étapes</h2>
+            <h2 class="mb-[10px] text-[17px] font-bold text-sup-dark-green">
+              Étapes
+            </h2>
             <div class="flex flex-col gap-4">
               <div v-for="(step, index) in recipe.steps" :key="step.id">
                 <p class="mb-1 text-[14.5px] font-bold text-sup-very-gray">
-                  {{ index + 1 }}. {{ step.type === "cook" ? "Cuisson" : "Préparation" }}
+                  {{ index + 1 }}.
+                  {{ step.type === "cook" ? "Cuisson" : "Préparation" }}
                 </p>
-                <div class="text-[13.5px] text-sup-very-gray" v-html="renderStepMarkdown(step.description)" />
+                <div
+                  class="text-[13.5px] text-sup-very-gray"
+                  v-html="renderStepMarkdown(step.description)"
+                />
               </div>
               <p v-if="!recipe.steps.length" class="text-[12px] text-gray-400">
                 Aucune étape renseignée.

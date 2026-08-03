@@ -38,7 +38,9 @@ const sortedRecipes = computed(() => sortFavoritesFirst(store.recipes));
       <h1 class="text-[24px] font-semibold text-sup-very-gray">Mes recettes</h1>
       <div class="flex flex-wrap items-center gap-[10px]">
         <div class="relative w-[220px]">
-          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <span
+            class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          >
             <IconSearch size="xs" />
           </span>
           <input
@@ -56,7 +58,9 @@ const sortedRecipes = computed(() => sortFavoritesFirst(store.recipes));
     </div>
 
     <p class="mb-4 text-[12px] text-gray-400">
-      {{ store.pagination.count }} recette{{ store.pagination.count > 1 ? "s" : "" }}
+      {{ store.pagination.count }} recette{{
+        store.pagination.count > 1 ? "s" : ""
+      }}
       personnelle{{ store.pagination.count > 1 ? "s" : "" }}
     </p>
 

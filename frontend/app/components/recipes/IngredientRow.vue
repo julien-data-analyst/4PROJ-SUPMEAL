@@ -159,7 +159,10 @@ const numberLabelClasses =
       <span class="flex-1">Nouvel ingrédient : une image est obligatoire.</span>
     </div>
 
-    <div v-if="isNewIngredient || line.image" class="mt-2 flex items-center gap-2">
+    <div
+      v-if="isNewIngredient || line.image"
+      class="mt-2 flex items-center gap-2"
+    >
       <img
         v-if="line.image"
         :src="line.image"
@@ -169,7 +172,12 @@ const numberLabelClasses =
         class="cursor-pointer text-xs font-semibold text-sup-dark-green hover:underline"
       >
         {{ line.image ? "Changer l'image" : "Choisir une image" }}
-        <input type="file" accept="image/*" class="hidden" @change="onImageChange" />
+        <input
+          type="file"
+          accept="image/*"
+          class="hidden"
+          @change="onImageChange"
+        />
       </label>
     </div>
 

@@ -53,7 +53,13 @@ const addNew = () => {
   if (!name || isAlreadyAdded(name)) return;
   tags.value = [
     ...tags.value,
-    { key: uid("tag"), tagId: null, name, type: activeType.value, description: "" },
+    {
+      key: uid("tag"),
+      tagId: null,
+      name,
+      type: activeType.value,
+      description: "",
+    },
   ];
   search.value = "";
 };
@@ -70,8 +76,12 @@ const exactMatchExists = computed(() =>
 </script>
 
 <template>
-  <div class="rounded-[14px] border border-sup-border bg-sup-withe p-[18px] shadow-sm">
-    <div class="mb-3 flex items-center gap-2 text-[14.5px] font-bold text-sup-very-gray">
+  <div
+    class="rounded-[14px] border border-sup-border bg-sup-withe p-[18px] shadow-sm"
+  >
+    <div
+      class="mb-3 flex items-center gap-2 text-[14.5px] font-bold text-sup-very-gray"
+    >
       <IconTag size="xs" />
       Tags
     </div>
@@ -83,7 +93,11 @@ const exactMatchExists = computed(() =>
         class="inline-flex items-center gap-1 rounded-full bg-sup-light-green/15 px-[10px] py-[3px] text-[11px] font-semibold text-sup-dark-green"
       >
         {{ tag.name }}
-        <button type="button" class="hover:text-sup-red-error" @click="removeTag(tag.key)">
+        <button
+          type="button"
+          class="hover:text-sup-red-error"
+          @click="removeTag(tag.key)"
+        >
           <IconClose size="xs" />
         </button>
       </span>
@@ -121,7 +135,10 @@ const exactMatchExists = computed(() =>
       v-if="suggestions.length"
       class="mt-2 max-h-32 overflow-y-auto rounded-md border border-sup-border"
     >
-      <li v-for="s in suggestions.filter((s) => !isAlreadyAdded(s.name))" :key="s.id">
+      <li
+        v-for="s in suggestions.filter((s) => !isAlreadyAdded(s.name))"
+        :key="s.id"
+      >
         <button
           type="button"
           class="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] text-sup-very-gray hover:bg-sup-light-gray"

@@ -21,7 +21,11 @@ const navItems = [
   { to: "/sharedwithme", label: "Partagés avec moi", icon: IconShared },
   { to: "/planning", label: "Planning repas", icon: IconCalendar },
   { to: "/search", label: "Recherche", icon: IconSearch },
-  { to: "/import_export", label: "Importer / Exporter", icon: IconImportExport },
+  {
+    to: "/import_export",
+    label: "Importer / Exporter",
+    icon: IconImportExport,
+  },
 ];
 
 const navItemClasses =
@@ -78,7 +82,13 @@ const isActive = (to: string) =>
 
       <div class="mx-1 my-[10px] h-px bg-sup-border" />
 
-      <NuxtLink :class="[navItemClasses, 'text-sup-red-error hover:bg-sup-red-error/10']" to="/logout">
+      <NuxtLink
+        :class="[
+          navItemClasses,
+          'text-sup-red-error hover:bg-sup-red-error/10',
+        ]"
+        to="/logout"
+      >
         <IconLogout size="xs" />
         Déconnexion
       </NuxtLink>

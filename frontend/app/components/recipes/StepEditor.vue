@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { StepLine } from "~/composables/useRecipes";
-import { applyMarkdownAction, renderStepMarkdown } from "~/composables/useRecipes";
+import {
+  applyMarkdownAction,
+  renderStepMarkdown,
+} from "~/composables/useRecipes";
 import IconBold from "~/components/icons/IconBold.vue";
 import IconItalic from "~/components/icons/IconItalic.vue";
 import IconListBullet from "~/components/icons/IconListBullet.vue";
@@ -33,7 +36,9 @@ const preview = computed(() => renderStepMarkdown(step.value.description));
 </script>
 
 <template>
-  <div class="rounded-[14px] border border-sup-border bg-sup-withe p-[18px] shadow-sm">
+  <div
+    class="rounded-[14px] border border-sup-border bg-sup-withe p-[18px] shadow-sm"
+  >
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <p class="text-[14.5px] font-bold text-sup-very-gray">
         Étape {{ props.index + 1 }}
@@ -83,7 +88,9 @@ const preview = computed(() => renderStepMarkdown(step.value.description));
     </div>
 
     <template v-if="!props.previewMode">
-      <div class="mb-2 flex items-center gap-1 rounded-md border border-sup-border bg-sup-light-gray p-1">
+      <div
+        class="mb-2 flex items-center gap-1 rounded-md border border-sup-border bg-sup-light-gray p-1"
+      >
         <button
           type="button"
           class="rounded p-1.5 text-sup-very-gray hover:bg-sup-withe"
