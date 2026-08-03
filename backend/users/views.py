@@ -21,6 +21,8 @@ from .oauth_microsoft import (
 )
 from .permissions import IsSelfOrStaff
 from .serializers import (
+    ChangeAvatarSerializer,
+    ChangeEmailSerializer,
     ChangePasswordSerializer,
     LoginSerializer,
     LogoutSerializer,
@@ -28,6 +30,7 @@ from .serializers import (
     UserRegisterSerializer,
     UserSerializer,
 )
+from .services import delete_user_account
 
 AUTH_TOKENS_EXAMPLE = {
     "user": {
@@ -214,6 +217,87 @@ class ChangePasswordView(APIView):
         return Response({"detail": "Password updated successfully."})
 
 
+class ChangeEmailView(APIView):
+    """View for changing the authenticated user's own email address.
+
+    Rejected for accounts that only have linked OAuth identities, since
+    Microsoft OAuth login matches users by email - letting them change it
+    here would desync the two.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=ChangeEmailSerializer,
+        responses=OpenApiTypes.OBJECT,
+        description=(
+            "Changes the authenticated user's own email address. Fails with `400 Bad "
+            "Request` if `new_email` is already used by another account, or the account "
+            "only has linked OAuth identities."
+        ),
+        examples=[
+            OpenApiExample(
+                "Email changed",
+                value={"detail": "Email updated successfully.", "email": "new@example.com"},
+                response_only=True,
+            ),
+        ],
+    )
+    def post(self, request: Request) -> Response:
+        serializer = ChangeEmailSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        request.user.email = serializer.validated_data[  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
+            "new_email"
+        ]
+        request.user.save()
+        return Response({"detail": "Email updated successfully.", "email": request.user.email})
+
+
+class ChangeAvatarView(APIView):
+    """View for changing the authenticated user's own avatar.
+
+    ``avatar`` is a base64 image data URI (PNG, JPEG or SVG only - see
+    ``common.image_validation.validate_image_data_uri``), stored directly on
+    ``profile_icon``. Rejected for accounts that only have linked OAuth
+    identities, since their avatar is synced from the OAuth provider.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=ChangeAvatarSerializer,
+        responses=OpenApiTypes.OBJECT,
+        description=(
+            "Changes the authenticated user's own avatar. `avatar` must be a base64 data "
+            "URI for a PNG, JPEG or SVG image. Fails with `400 Bad Request` if the image "
+            "type isn't allowed, the data is malformed, or the account only has linked "
+            "OAuth identities."
+        ),
+        examples=[
+            OpenApiExample(
+                "Avatar changed",
+                value={
+                    "detail": "Avatar updated successfully.",
+                    "profile_icon": "data:image/png;base64,...",
+                },
+                response_only=True,
+            ),
+        ],
+    )
+    def post(self, request: Request) -> Response:
+        serializer = ChangeAvatarSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        request.user.profile_icon = serializer.validated_data[  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
+            "avatar"
+        ]
+        request.user.save()
+        return Response(
+            {"detail": "Avatar updated successfully.", "profile_icon": request.user.profile_icon}
+        )
+
+
 class LogoutView(APIView):
     """Logs the authenticated user out by blacklisting their refresh and access tokens.
 
@@ -296,3 +380,6 @@ class UserViewSet(
     def me(self, request: Request) -> Response:
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+
+    def perform_destroy(self, instance: User) -> None:
+        delete_user_account(instance)
