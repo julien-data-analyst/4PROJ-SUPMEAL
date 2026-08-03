@@ -6,6 +6,7 @@ import IconTrash from "~/components/icons/IconTrash.vue";
 import IconSave from "~/components/icons/IconSave.vue";
 import IconCamera from "~/components/icons/IconCamera.vue";
 import IconPlus from "~/components/icons/IconPlus.vue";
+import IconClock from "~/components/icons/IconClock.vue";
 import StepEditor from "~/components/recipes/StepEditor.vue";
 import IngredientsPanel from "~/components/recipes/IngredientsPanel.vue";
 import TagsPanel from "~/components/recipes/TagsPanel.vue";
@@ -50,6 +51,16 @@ const deleteModalOpen = ref(false);
 const isDeleting = ref(false);
 
 const currentRecipe = computed(() => store.currentRecipe);
+
+// Live counter - sum of every step's duration plus the cooking duration,
+// updated as the user edits either.
+const totalMinutes = computed(() => {
+  const stepsTotal = stepLines.value.reduce(
+    (sum, s) => sum + (Number(s.durationMinutes) || 0),
+    0,
+  );
+  return stepsTotal + (Number(cookingDuration.value) || 0);
+});
 
 const loadRecipe = async () => {
   if (props.mode !== "edit" || !props.recipeId) return;
@@ -292,6 +303,14 @@ const confirmDelete = async () => {
             {{ formatCookingDuration(cookingDuration) }}
           </span>
         </div>
+      </div>
+
+      <div
+        v-if="totalMinutes > 0"
+        class="mb-4 flex items-center gap-2 rounded-md border border-sup-border bg-sup-light-green/10 px-4 py-[10px] text-[13px] font-semibold text-sup-dark-green"
+      >
+        <IconClock size="xs" />
+        Temps total estimé : {{ formatCookingDuration(totalMinutes) }}
       </div>
 
       <p v-if="saveError" class="mb-4 rounded-md bg-sup-red-error/10 px-4 py-3 text-[13px] text-sup-red-error">

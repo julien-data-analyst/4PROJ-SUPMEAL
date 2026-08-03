@@ -10,6 +10,7 @@ import {
   useRecipes,
   renderStepMarkdown,
   formatCookingDuration,
+  sumStepMinutes,
 } from "~/composables/useRecipes";
 import { useAuth } from "~/composables/useAuth";
 
@@ -37,6 +38,9 @@ onMounted(async () => {
 const recipe = computed(() => store.currentRecipe);
 const isOwner = computed(
   () => !!recipe.value && recipe.value.creator.id === user.value?.id,
+);
+const totalPrepMinutes = computed(() =>
+  recipe.value ? sumStepMinutes(recipe.value.steps) : 0,
 );
 
 const onToggleFavorite = () => {
@@ -93,7 +97,17 @@ const confirmDelete = async () => {
     <template v-else-if="recipe">
       <div class="mb-4">
         <div v-if="recipe.image" class="mb-3 h-56 w-full overflow-hidden rounded-md">
-          <img :src="recipe.image" :alt="recipe.title" class="h-full w-full object-cover" />
+          <a
+            v-if="recipe.source"
+            :href="recipe.source"
+            target="_blank"
+            rel="noopener noreferrer"
+            :title="`Ouvrir la source : ${recipe.source}`"
+            class="block h-full w-full"
+          >
+            <img :src="recipe.image" :alt="recipe.title" class="h-full w-full object-cover transition hover:brightness-95" />
+          </a>
+          <img v-else :src="recipe.image" :alt="recipe.title" class="h-full w-full object-cover" />
         </div>
         <h1 class="mb-[6px] text-[24px] font-semibold text-sup-very-gray">
           {{ recipe.title }}
@@ -103,9 +117,23 @@ const confirmDelete = async () => {
             {{ recipe.cookbook ? "Dans un cookbook" : "Personnel" }}
           </span>
           <span>par {{ recipe.creator.first_name || recipe.creator.username }}</span>
-          <span v-if="recipe.cooking_duration">
-            · {{ formatCookingDuration(recipe.cooking_duration) }}
+          <span v-if="totalPrepMinutes > 0">
+            · Préparation : {{ formatCookingDuration(totalPrepMinutes) }}
           </span>
+          <span v-if="recipe.cooking_duration">
+            · Cuisson : {{ formatCookingDuration(recipe.cooking_duration) }}
+          </span>
+          <template v-if="recipe.source">
+            ·
+            <a
+              :href="recipe.source"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-semibold text-sup-dark-green hover:underline"
+            >
+              Source
+            </a>
+          </template>
         </div>
         <div v-if="recipe.tags.length" class="mt-[10px] flex flex-wrap gap-1.5">
           <span

@@ -1,5 +1,4 @@
 import django_filters
-from django.contrib.postgres.search import SearchQuery, SearchVector
 from django.db.models import FloatField, OuterRef, QuerySet, Subquery, Sum
 from django.db.models.functions import Coalesce, ExtractHour, ExtractMinute, ExtractSecond
 
@@ -60,9 +59,10 @@ class RecipeFilter(django_filters.FilterSet):
         fields: list[str] = []
 
     def filter_name(self, queryset: QuerySet, name: str, value: str) -> QuerySet:
-        return queryset.annotate(search=SearchVector("title", config="french")).filter(
-            search=SearchQuery(value, config="french")
-        )
+        # Case-insensitive substring match (SQL ILIKE) rather than full-text
+        # search - FTS matches whole lexemes, so a single letter or partial
+        # word (e.g. "g" against "Gateaux") would never match.
+        return queryset.filter(title__icontains=value)
 
     @staticmethod
     def _tokens(value: str) -> list[str]:

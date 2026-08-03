@@ -747,7 +747,7 @@ qu'il possède ou avec lequel il a été partagé.
 
 | Nom | Type | Description |
 | --- | --- | --- |
-| `name` | string | Recherche plein texte (PostgreSQL, config française) sur le titre de la recette. |
+| `name` | string | Correspondance partielle insensible à la casse (`ILIKE` SQL) sur le titre de la recette. |
 | `tags` | string | Noms et/ou ids de tags séparés par des virgules ; la recette doit posséder **tous** les tags listés. |
 | `ingredients` | string | Noms et/ou ids d'ingrédients séparés par des virgules ; la recette doit contenir **tous** les ingrédients listés. |
 | `cookbook` | string | Correspondance partielle insensible à la casse sur le nom du cookbook. |
