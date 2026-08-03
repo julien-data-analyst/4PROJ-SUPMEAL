@@ -1,3 +1,9 @@
+<script setup lang="ts">
+import RecipeEditor from "~/components/recipes/RecipeEditor.vue";
+
+definePageMeta({ layout: "app" });
+</script>
+
 <template>
-  <div class="p-8 text-sup-very-gray">Page « Créer nouveau » à venir.</div>
+  <RecipeEditor mode="create" />
 </template>
