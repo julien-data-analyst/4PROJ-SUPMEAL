@@ -109,6 +109,14 @@ export function relativeTime(dateStr: string): string {
   return `Il y a ${years} an${years > 1 ? "s" : ""}`;
 }
 
+// Sum of every step's duration (in minutes) - the recipe's total prep time.
+export function sumStepMinutes(steps: { dury: string }[]): number {
+  return steps.reduce(
+    (total, step) => total + (Number(duryToMinutes(step.dury)) || 0),
+    0,
+  );
+}
+
 export function formatCookingDuration(
   minutes: string | number | null,
 ): string {

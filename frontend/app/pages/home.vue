@@ -85,7 +85,7 @@ const recentRecipes = computed(() => {
           v-for="recipe in recentRecipes"
           :key="recipe.id"
           :recipe="recipe"
-          :to="`/recipes/${recipe.id}/edit`"
+          :to="`/recipes/${recipe.id}/view`"
         />
       </div>
 

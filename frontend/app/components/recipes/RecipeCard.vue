@@ -7,6 +7,7 @@ import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";
 import IconEdit from "~/components/icons/IconEdit.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
+import IconChevron from "~/components/icons/IconChevron.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
 
 const props = defineProps<{ recipe: Recipe; to: string }>();
@@ -34,6 +35,7 @@ const isFavoriteBusy = ref(false);
 const menuOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 const deleteModalOpen = ref(false);
+const tagsExpanded = ref(false);
 
 onClickOutside(menuRef, () => (menuOpen.value = false));
 
@@ -66,7 +68,7 @@ const menuItemClasses =
     <NuxtLink :to="to" class="absolute inset-0 z-0" :aria-label="recipe.title" />
 
     <div
-      class="relative z-[1] flex h-[110px] w-full items-center justify-center overflow-hidden"
+      class="flex h-[110px] w-full items-center justify-center overflow-hidden"
       :class="recipe.image ? 'bg-sup-light-gray' : placeholderClass"
     >
       <img
@@ -78,13 +80,34 @@ const menuItemClasses =
       <span v-else class="text-[26px]">🍽️</span>
     </div>
 
-    <div class="relative z-[1] px-3 pb-3 pt-[10px]">
+    <div class="px-3 pb-3 pt-[10px]">
       <p class="mb-[3px] truncate text-[13px] font-semibold text-sup-very-gray">
         {{ recipe.title }}
       </p>
       <div class="flex items-center justify-between gap-1.5 text-[11px] text-gray-400">
-        <span>{{ relativeTime(recipe.updated_at) }}</span>
+        <span class="flex items-center gap-1">
+          {{ relativeTime(recipe.updated_at) }}
+          <button
+            v-if="recipe.tags.length"
+            type="button"
+            class="relative z-10 flex items-center text-gray-400 hover:text-sup-dark-green"
+            :title="tagsExpanded ? 'Masquer les tags' : 'Voir les tags'"
+            @click.stop.prevent="tagsExpanded = !tagsExpanded"
+          >
+            <IconChevron size="xs" :direction="tagsExpanded ? 'up' : 'down'" />
+          </button>
+        </span>
         <span>{{ recipe.cookbook ? "Cookbook" : "Recette" }}</span>
+      </div>
+
+      <div v-if="tagsExpanded && recipe.tags.length" class="mt-1.5 flex flex-wrap gap-1">
+        <span
+          v-for="tag in recipe.tags"
+          :key="tag.id"
+          class="rounded-full bg-sup-light-green/15 px-2 py-0.5 text-[10px] font-medium text-sup-dark-green"
+        >
+          {{ tag.name }}
+        </span>
       </div>
     </div>
 

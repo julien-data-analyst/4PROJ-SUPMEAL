@@ -79,7 +79,7 @@ const sortedRecipes = computed(() => sortFavoritesFirst(store.recipes));
         v-for="recipe in sortedRecipes"
         :key="recipe.id"
         :recipe="recipe"
-        :to="`/recipes/${recipe.id}/edit`"
+        :to="`/recipes/${recipe.id}/view`"
       />
     </div>
 
