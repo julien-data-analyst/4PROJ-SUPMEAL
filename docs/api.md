@@ -729,7 +729,7 @@ they created, or recipes filed in a cookbook they own or are shared.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `name` | string | Full-text search (PostgreSQL, French config) on the recipe title. |
+| `name` | string | Case-insensitive substring match (SQL `ILIKE`) on the recipe title. |
 | `tags` | string | Comma-separated tag names and/or ids; the recipe must have **all** of them. |
 | `ingredients` | string | Comma-separated ingredient names and/or ids; the recipe must contain **all** of them. |
 | `cookbook` | string | Case-insensitive partial match on the cookbook's name. |

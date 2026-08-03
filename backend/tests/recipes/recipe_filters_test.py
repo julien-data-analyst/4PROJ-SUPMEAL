@@ -126,13 +126,13 @@ def test_recipe_list_is_ordered_by_most_recently_updated_first(
     assert _titles(response) == [first.title, second.title]
 
 
-##########################-
-# name: full-text search
-##########################-
+###############################################-
+# name: case-insensitive substring match (ILIKE)
+###############################################-
 
 
 def test_name_filter_matches_recipe_title(auth_client: APIClient, regular_user: User):
-    """Test that ``?name=`` performs a full-text search on the recipe title."""
+    """Test that ``?name=`` matches a substring of the recipe title."""
     matching = _make_recipe(creator=regular_user, title="Crepes sucrees")
     _make_recipe(creator=regular_user, title="Salade de tomates")
     url = reverse("recipe-list")
@@ -150,6 +150,27 @@ def test_name_filter_excludes_non_matching_titles(auth_client: APIClient, regula
     response = auth_client.get(url, {"name": "quiche"})
 
     assert _titles(response) == []
+
+
+def test_name_filter_matches_single_letter_prefix(auth_client: APIClient, regular_user: User):
+    """A single-letter query must still match (full-text search wouldn't)."""
+    matching = _make_recipe(creator=regular_user, title="Gateaux au chocolat")
+    _make_recipe(creator=regular_user, title="Salade de tomates")
+    url = reverse("recipe-list")
+
+    response = auth_client.get(url, {"name": "G"})
+
+    assert _titles(response) == [matching.title]
+
+
+def test_name_filter_is_case_insensitive(auth_client: APIClient, regular_user: User):
+    """Test that ``?name=`` ignores case."""
+    matching = _make_recipe(creator=regular_user, title="Gateaux au chocolat")
+    url = reverse("recipe-list")
+
+    response = auth_client.get(url, {"name": "GATEAUX"})
+
+    assert _titles(response) == [matching.title]
 
 
 ##################################-

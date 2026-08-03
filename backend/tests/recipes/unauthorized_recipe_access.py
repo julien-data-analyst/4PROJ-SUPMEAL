@@ -43,15 +43,30 @@ def test_anonymous_user_cannot_delete_a_recipe(api_client: APIClient, owned_reci
     assert Recipe.objects.filter(pk=owned_recipe.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
 
 
+def test_other_user_cannot_list_someone_elses_personal_recipe(
+    other_auth_client: APIClient, owned_recipe: Recipe
+):
+    """A standalone recipe (no cookbook) must only be listed for its creator."""
+    url = reverse("recipe-list")
+
+    response = other_auth_client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data is not None
+    listed_ids = [item["id"] for item in response.data["results"]]
+    assert owned_recipe.pk not in listed_ids
+
+
 def test_other_user_cannot_update_someone_elses_recipe(
     other_auth_client: APIClient, owned_recipe: Recipe
 ):
-    """Test that a non-owner cannot partially update another user's recipe (403)."""
+    """A standalone recipe isn't visible to a non-owner, so PATCH 404s (not 403) -
+    revealing it exists via a 403 would itself be an information leak."""
     url = reverse("recipe-detail", kwargs={"pk": owned_recipe.pk})
 
     response = other_auth_client.patch(url, {"title": "Hacked"}, format="json")
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     owned_recipe.refresh_from_db()
     assert owned_recipe.title != "Hacked"
 
@@ -59,12 +74,12 @@ def test_other_user_cannot_update_someone_elses_recipe(
 def test_other_user_cannot_replace_someone_elses_recipe_via_put(
     other_auth_client: APIClient, owned_recipe: Recipe
 ):
-    """Test that a non-owner cannot fully replace another user's recipe (403)."""
+    """Test that a non-owner cannot fully replace another user's recipe (404, not visible)."""
     url = reverse("recipe-detail", kwargs={"pk": owned_recipe.pk})
 
     response = other_auth_client.put(url, {"title": "Hacked"}, format="json")
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     owned_recipe.refresh_from_db()
     assert owned_recipe.title != "Hacked"
 
@@ -83,7 +98,7 @@ def test_other_user_cannot_inject_ingredients_via_update(
     }
     response = other_auth_client.patch(url, payload, format="json")
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert (
         RecipeIngredient.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
             recipe=owned_recipe
@@ -95,12 +110,12 @@ def test_other_user_cannot_inject_ingredients_via_update(
 def test_other_user_cannot_delete_someone_elses_recipe(
     other_auth_client: APIClient, owned_recipe: Recipe
 ):
-    """Test that a non-owner cannot delete another user's recipe (403)."""
+    """Test that a non-owner cannot delete another user's recipe (404, not visible)."""
     url = reverse("recipe-detail", kwargs={"pk": owned_recipe.pk})
 
     response = other_auth_client.delete(url)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert Recipe.objects.filter(pk=owned_recipe.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
     assert Step.objects.filter(recipe=owned_recipe).exists()  # pyright: ignore[reportAttributeAccessIssue]
     assert RecipeTag.objects.filter(recipe=owned_recipe).exists()  # pyright: ignore[reportAttributeAccessIssue]
