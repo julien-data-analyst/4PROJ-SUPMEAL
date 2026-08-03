@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLogo from "~/components/AppLogo.vue";
+import IconUser from "~/components/icons/IconUser.vue";
 import IconHome from "~/components/icons/IconHome.vue";
 import IconRecipe from "~/components/icons/IconRecipe.vue";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
@@ -39,7 +40,20 @@ const isActive = (to: string) =>
   <aside
     class="sticky top-0 flex h-screen w-[236px] shrink-0 flex-col border-r border-sup-border bg-sup-withe px-[14px] py-5"
   >
-    <div class="px-[10px] pb-[22px] pt-1">
+    <div class="flex items-center gap-2 px-[10px] pb-[22px] pt-1">
+      <NuxtLink
+        to="/settings"
+        class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-sup-border bg-sup-light-gray text-gray-400"
+        title="Paramètres"
+      >
+        <img
+          v-if="user?.profile_icon"
+          :src="user.profile_icon"
+          alt=""
+          class="h-full w-full object-cover"
+        />
+        <IconUser v-else size="xs" />
+      </NuxtLink>
       <AppLogo size="sm" />
     </div>
 
