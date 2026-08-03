@@ -117,9 +117,7 @@ export function sumStepMinutes(steps: { dury: string }[]): number {
   );
 }
 
-export function formatCookingDuration(
-  minutes: string | number | null,
-): string {
+export function formatCookingDuration(minutes: string | number | null): string {
   if (minutes === null || minutes === undefined || minutes === "") return "";
   const total = Math.round(Number(minutes));
   if (Number.isNaN(total)) return "";
