@@ -52,6 +52,7 @@ def test_other_user_cannot_list_someone_elses_personal_recipe(
     response = other_auth_client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
+    assert response.data is not None
     listed_ids = [item["id"] for item in response.data["results"]]
     assert owned_recipe.pk not in listed_ids
 
