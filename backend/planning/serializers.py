@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from common.image_validation import validate_image_data_uri
 from cookbooks.permissions import has_rank
 from recipes.models import Recipe
 from recipes.serializers import RecipeSerializer
@@ -50,6 +51,7 @@ class PlanningSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "icon",
+            "type",
             "creator",
             "cookbook",
             "meals",
@@ -75,8 +77,12 @@ class PlanningWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Planning
-        fields = ["id", "name", "icon", "cookbook", "meals"]
+        fields = ["id", "name", "icon", "type", "cookbook", "meals"]
         read_only_fields = ["id"]
+
+    def validate_icon(self, value: str | None) -> str | None:
+        validate_image_data_uri(value)
+        return value
 
     def validate_cookbook(self, cookbook):
         if cookbook is None:
@@ -99,6 +105,21 @@ class PlanningWriteSerializer(serializers.ModelSerializer):
                 )
             seen_slots.add(slot)
         return meals
+
+    def validate(self, attrs: dict) -> dict:
+        meals = attrs.get("meals")
+        planning_type = attrs.get(
+            "type", getattr(self.instance, "type", Planning.Type.WEEKLY)
+        )
+        if meals and planning_type == Planning.Type.DAILY:
+            days = {meal["dayofweek"] for meal in meals}
+            if len(days) > 1:
+                raise serializers.ValidationError(
+                    {
+                        "meals": "A daily planning can only schedule meals for a single day."
+                    }
+                )
+        return attrs
 
     def create(self, validated_data: dict) -> Planning:
         meals_data = validated_data.pop("meals", [])
