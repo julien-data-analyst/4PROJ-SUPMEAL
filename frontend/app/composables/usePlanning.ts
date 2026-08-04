@@ -63,7 +63,10 @@ export interface MealSlot {
 // Builds every schedulable slot for a planning type: 6 for a single day
 // (2 moments x 3 courses), 42 for the week (7 days x 2 moments x 3 courses).
 export function generateEmptySlots(type: PlanningType): MealSlot[] {
-  const days = type === "journalier" ? [DAILY_PLANNING_DAY] : DAYS_OF_WEEK.map((d) => d.value);
+  const days =
+    type === "journalier"
+      ? [DAILY_PLANNING_DAY]
+      : DAYS_OF_WEEK.map((d) => d.value);
   const slots: MealSlot[] = [];
   for (const day of days) {
     for (const moment of MEAL_MOMENTS) {

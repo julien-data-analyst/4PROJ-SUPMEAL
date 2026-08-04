@@ -80,9 +80,15 @@ const { isLoading, deleteModalOpen, planning, isOwner, confirmDelete } =
             </span>
             <span
               >par
-              {{ planning.creator.first_name || planning.creator.username }}</span
+              {{
+                planning.creator.first_name || planning.creator.username
+              }}</span
             >
-            <span>· {{ planning.meals.length }} repas planifié{{ planning.meals.length > 1 ? "s" : "" }}</span>
+            <span
+              >· {{ planning.meals.length }} repas planifié{{
+                planning.meals.length > 1 ? "s" : ""
+              }}</span
+            >
           </div>
         </div>
       </div>

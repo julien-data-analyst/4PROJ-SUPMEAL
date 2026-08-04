@@ -87,10 +87,16 @@ const expanded = ref(true);
                 :class="expanded ? 'py-3' : 'py-2'"
               >
                 <RecipePicker
-                  :model-value="pickFor(slotFor(day.value, moment.value, course.value))"
+                  :model-value="
+                    pickFor(slotFor(day.value, moment.value, course.value))
+                  "
                   :expanded="expanded"
                   @update:model-value="
-                    (v) => onUpdate(slotFor(day.value, moment.value, course.value), v)
+                    (v) =>
+                      onUpdate(
+                        slotFor(day.value, moment.value, course.value),
+                        v,
+                      )
                   "
                 />
               </td>
