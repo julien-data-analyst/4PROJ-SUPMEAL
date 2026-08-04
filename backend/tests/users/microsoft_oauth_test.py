@@ -132,6 +132,33 @@ def test_microsoft_oauth_links_to_existing_user_by_email(api_client: APIClient, 
     ).exists()
 
 
+def test_microsoft_oauth_links_to_existing_user_by_email_case_insensitively(
+    api_client: APIClient, make_user
+):
+    """Matching by email must be case-insensitive, or a differently-cased Microsoft
+    profile email would create a duplicate account instead of linking to the existing
+    one - see UserRegisterSerializer.validate_email for the same rule at registration."""
+    existing_user = make_user(username="janedoe", email="Jane.Doe@Contoso.com")
+    url = reverse("oauth-microsoft")
+
+    with (
+        patch(
+            "users.oauth_microsoft._confidential_client",
+            return_value=_mock_confidential_client(),
+        ),
+        patch("users.oauth_microsoft.requests.get", side_effect=_mock_graph_get(has_photo=True)),
+    ):
+        response = api_client.post(url, {"code": "auth-code"}, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data is not None
+    assert User.objects.filter(email__iexact="jane.doe@contoso.com").count() == 1
+    assert response.data["user"]["id"] == existing_user.pk
+    assert OAuthUser.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        user=existing_user, provider="microsoft"
+    ).exists()
+
+
 def test_microsoft_oauth_with_invalid_code_returns_400(api_client: APIClient):
     url = reverse("oauth-microsoft")
 
