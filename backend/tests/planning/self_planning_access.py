@@ -150,9 +150,7 @@ def test_creating_planning_rejects_invalid_type(auth_client: APIClient):
     """Test that ``type`` is restricted to "journalier"/"hebdomadaire"."""
     url = reverse("planning-list")
 
-    response = auth_client.post(
-        url, {"name": "Type invalide", "type": "mensuel"}, format="json"
-    )
+    response = auth_client.post(url, {"name": "Type invalide", "type": "mensuel"}, format="json")
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert not Planning.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
