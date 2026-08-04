@@ -32,6 +32,12 @@ from .serializers import PlanningSerializer, PlanningWriteSerializer
                 examples=[OpenApiExample("Exemple", value="Semaine du 20 juillet")],
             ),
             OpenApiParameter(
+                name="type",
+                type=OpenApiTypes.STR,
+                description="Filtre par type de planning : `journalier` ou `hebdomadaire`.",
+                examples=[OpenApiExample("Exemple", value="hebdomadaire")],
+            ),
+            OpenApiParameter(
                 name="cookbook",
                 type=OpenApiTypes.STR,
                 description="Filtre par nom de cookbook (recherche partielle, insensible a la "
@@ -94,8 +100,7 @@ class PlanningViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return (
             Planning.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
-                models.Q(cookbook__isnull=True)  # pyright: ignore[reportOperatorIssue]
-                | models.Q(creator=user)
+                models.Q(creator=user)  # pyright: ignore[reportOperatorIssue]
                 | models.Q(cookbook__creator=user)
                 | models.Q(cookbook__shared_with__user=user)
             )

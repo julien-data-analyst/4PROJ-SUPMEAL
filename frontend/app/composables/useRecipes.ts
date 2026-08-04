@@ -295,6 +295,15 @@ export function useRecipes() {
     });
   };
 
+  // Used by the planning recipe picker: only the caller's own personal
+  // recipes are selectable there, name-filtered (icontains) as they type.
+  const searchMyRecipes = (search: string, limit = 8) =>
+    store.fetchRecipes({
+      in_cookbook: false,
+      name: search || undefined,
+      page_size: limit,
+    });
+
   const toggleFavorite = (recipe: Recipe) =>
     store.setFavorite(recipe.id, !recipe.is_favorite);
 
@@ -302,6 +311,7 @@ export function useRecipes() {
     store,
     fetchMyRecipes,
     fetchRecentRecipes,
+    searchMyRecipes,
     toggleFavorite,
   };
 }

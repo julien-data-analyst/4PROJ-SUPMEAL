@@ -2,10 +2,12 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from cookbooks.models import DEFAULT_COOKBOOK_ICON, Cookbook
+from cookbooks.models import DEFAULT_COOKBOOK_ICON, Cookbook, SharedUserCookbook
+from messaging.models import Message
 from planning.models import Planning
 from recipes.models import Recipe
 from tests.cookbooks.conftest import APIClient
+from users.models import User
 
 pytestmark = pytest.mark.django_db
 
@@ -69,6 +71,41 @@ def test_owner_can_delete_own_cookbook(auth_client: APIClient, owned_cookbook: C
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not Cookbook.objects.filter(pk=owned_cookbook.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def test_deleting_cookbook_with_content_detaches_recipes_and_plannings(
+    auth_client: APIClient,
+    owned_cookbook: Cookbook,
+    regular_user: User,
+    other_user: User,
+):
+    """Test that deleting a cookbook detaches (not deletes) the recipes/plannings filed
+    in it, and drops the cookbook-scoped rows (shares, messages) that only made sense in
+    it - instead of failing on their PROTECTed `cookbook` FK."""
+    recipe = Recipe(title="Recette du carnet", creator=regular_user, cookbook=owned_cookbook)
+    recipe.save()
+    planning = Planning(name="Planning du carnet", creator=regular_user, cookbook=owned_cookbook)
+    planning.save()
+    SharedUserCookbook(cookbook=owned_cookbook, user=other_user, role="reader").save()  # pyright: ignore[reportAttributeAccessIssue]
+    Message(
+        content="Bienvenue", canal="general", author=regular_user, cookbook=owned_cookbook
+    ).save()
+    url = reverse("cookbook-detail", kwargs={"pk": owned_cookbook.pk})
+
+    response = auth_client.delete(url)
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not Cookbook.objects.filter(pk=owned_cookbook.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
+    recipe.refresh_from_db()
+    planning.refresh_from_db()
+    assert recipe.cookbook_id is None  # pyright: ignore[reportAttributeAccessIssue]
+    assert Recipe.objects.filter(pk=recipe.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
+    assert planning.cookbook_id is None  # pyright: ignore[reportAttributeAccessIssue]
+    assert Planning.objects.filter(pk=planning.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
+    assert not SharedUserCookbook.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        cookbook_id=owned_cookbook.pk
+    ).exists()
+    assert not Message.objects.filter(cookbook_id=owned_cookbook.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def test_anonymous_user_cannot_create_cookbook(api_client: APIClient):

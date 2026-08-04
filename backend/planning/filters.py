@@ -6,6 +6,7 @@ from .models import Planning
 
 class PlanningFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
+    type = django_filters.CharFilter(field_name="type", lookup_expr="exact")
     cookbook = django_filters.CharFilter(field_name="cookbook__name", lookup_expr="icontains")
     in_cookbook = django_filters.BooleanFilter(method="filter_in_cookbook")
     shared_with_me = django_filters.BooleanFilter(method="filter_shared_with_me")

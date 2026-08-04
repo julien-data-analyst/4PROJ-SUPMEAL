@@ -3,6 +3,8 @@ from django.urls import reverse
 from rest_framework import status
 
 from cookbooks.models import Cookbook
+from messaging.models import Message
+from planning.models import Planning, RecipePlanning
 from recipes.models import Ingredient, Recipe, RecipeIngredient, RecipeTag, Step, Tag
 from tests.recipes.conftest import APIClient
 from users.models import User
@@ -196,6 +198,71 @@ def test_owner_can_delete_own_recipe(auth_client: APIClient, owned_recipe: Recip
     # Shared master data (the ingredient/tag rows themselves) is untouched.
     assert Ingredient.objects.filter(pk=ingredient_id).exists()  # pyright: ignore[reportAttributeAccessIssue]
     assert Tag.objects.filter(pk=tag_id).exists()  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def test_deleting_recipe_removes_it_from_all_plannings(
+    auth_client: APIClient, owned_recipe: Recipe, regular_user: User
+):
+    """Test that deleting a recipe scheduled in a planning unschedules it there too,
+    instead of failing on the PROTECTed RecipePlanning.recipe FK - the planning itself
+    is left in place, just without that meal."""
+    planning = Planning(name="Planning avec la recette", creator=regular_user)
+    planning.save()
+    RecipePlanning(
+        planning=planning, recipe=owned_recipe, type="plat", lunch="midi", dayofweek="lundi"
+    ).save()
+    url = reverse("recipe-detail", kwargs={"pk": owned_recipe.pk})
+
+    response = auth_client.delete(url)
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not Recipe.objects.filter(pk=owned_recipe.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
+    assert not RecipePlanning.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        recipe_id=owned_recipe.pk
+    ).exists()
+    assert Planning.objects.filter(pk=planning.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def test_deleting_recipe_removes_its_messages(
+    auth_client: APIClient, regular_user: User, owned_cookbook: Cookbook
+):
+    """Test that deleting a recipe also removes any messages posted in its channel,
+    instead of failing on the PROTECTed Message.recipe FK."""
+    recipe = Recipe(title="Recette commentee", creator=regular_user, cookbook=owned_cookbook)
+    recipe.save()
+    Message(
+        content="Miam !",
+        canal="general",
+        author=regular_user,
+        cookbook=owned_cookbook,
+        recipe=recipe,
+    ).save()
+    url = reverse("recipe-detail", kwargs={"pk": recipe.pk})
+
+    response = auth_client.delete(url)
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not Recipe.objects.filter(pk=recipe.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
+    assert not Message.objects.filter(recipe_id=recipe.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def test_recipe_detail_lists_plannings_it_is_scheduled_in(
+    auth_client: APIClient, owned_recipe: Recipe, regular_user: User
+):
+    """Test that ``used_in_plannings`` warns which plannings a recipe would be removed
+    from, so the frontend can surface this before/at delete time."""
+    planning = Planning(name="Semaine test", creator=regular_user)
+    planning.save()
+    RecipePlanning(
+        planning=planning, recipe=owned_recipe, type="plat", lunch="midi", dayofweek="lundi"
+    ).save()
+    url = reverse("recipe-detail", kwargs={"pk": owned_recipe.pk})
+
+    response = auth_client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data is not None
+    assert response.data["used_in_plannings"] == [{"id": planning.pk, "name": "Semaine test"}]
 
 
 def test_owner_can_create_recipe_in_own_cookbook(auth_client: APIClient, owned_cookbook: Cookbook):
