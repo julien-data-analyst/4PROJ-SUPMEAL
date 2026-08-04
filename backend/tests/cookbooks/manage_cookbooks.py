@@ -98,9 +98,9 @@ def test_deleting_cookbook_with_content_detaches_recipes_and_plannings(
     assert not Cookbook.objects.filter(pk=owned_cookbook.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
     recipe.refresh_from_db()
     planning.refresh_from_db()
-    assert recipe.cookbook_id is None
+    assert recipe.cookbook_id is None  # pyright: ignore[reportAttributeAccessIssue]
     assert Recipe.objects.filter(pk=recipe.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
-    assert planning.cookbook_id is None
+    assert planning.cookbook_id is None  # pyright: ignore[reportAttributeAccessIssue]
     assert Planning.objects.filter(pk=planning.pk).exists()  # pyright: ignore[reportAttributeAccessIssue]
     assert not SharedUserCookbook.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
         cookbook_id=owned_cookbook.pk
