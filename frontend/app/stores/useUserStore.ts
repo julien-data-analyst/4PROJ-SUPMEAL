@@ -6,6 +6,7 @@ import { useAuth, type User } from "~/composables/useAuth";
 export interface ChangeEmailResponse {
   detail: string;
   email: string;
+  oauth_unlinked: boolean;
 }
 
 export interface ChangePasswordResponse {
@@ -15,6 +16,11 @@ export interface ChangePasswordResponse {
 export interface ChangeAvatarResponse {
   detail: string;
   profile_icon: string;
+}
+
+export interface LinkMicrosoftResponse {
+  detail: string;
+  user: User;
 }
 
 export const useUserStore = defineStore("user", () => {
@@ -43,17 +49,42 @@ export const useUserStore = defineStore("user", () => {
 
   const changeEmail = async (
     newEmail: string,
+    newPassword?: string,
   ): Promise<ChangeEmailResponse> => {
     loading.value = true;
     error.value = null;
     try {
       const result = await post<ChangeEmailResponse>("/users/change-email/", {
         new_email: newEmail,
+        ...(newPassword ? { new_password: newPassword } : {}),
       });
-      useAuth().updateUser({ email: result.email });
+      useAuth().updateUser({
+        email: result.email,
+        ...(result.oauth_unlinked ? { is_oauth: false } : {}),
+      });
       return result;
     } catch (cause) {
       error.value = "Impossible de mettre à jour l'adresse email.";
+      throw cause;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const linkMicrosoftAccount = async (
+    code: string,
+  ): Promise<LinkMicrosoftResponse> => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const result = await post<LinkMicrosoftResponse>(
+        "/users/oauth/microsoft/link/",
+        { code },
+      );
+      useAuth().updateUser(result.user);
+      return result;
+    } catch (cause) {
+      error.value = "Impossible de lier le compte Microsoft.";
       throw cause;
     } finally {
       loading.value = false;
@@ -118,6 +149,7 @@ export const useUserStore = defineStore("user", () => {
     changeEmail,
     changePassword,
     changeAvatar,
+    linkMicrosoftAccount,
     deleteAccount,
   };
 });

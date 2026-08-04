@@ -74,10 +74,13 @@ def test_change_avatar_requires_authentication(api_client: APIClient):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-def test_oauth_user_cannot_change_avatar(api_client: APIClient, oauth_user: User):
+def test_oauth_user_can_change_avatar(api_client: APIClient, oauth_user: User):
+    """An OAuth account can override the avatar synced from its provider."""
     api_client.force_authenticate(user=oauth_user)
     url = reverse("change-avatar")
 
     response = api_client.post(url, {"avatar": PNG_DATA_URI}, format="json")
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_200_OK
+    oauth_user.refresh_from_db()
+    assert oauth_user.profile_icon == PNG_DATA_URI

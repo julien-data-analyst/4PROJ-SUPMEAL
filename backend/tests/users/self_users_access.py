@@ -55,6 +55,40 @@ def test_register_without_profile_icon_defaults_to_empty(api_client: APIClient):
     assert response.data["user"]["profile_icon"] == ""
 
 
+def test_register_rejects_email_already_in_use(api_client: APIClient, regular_user: User):
+    url = reverse("user-register")
+
+    response = api_client.post(
+        url,
+        {"username": "someoneelse", "email": regular_user.email, "password": "C0mplexPassw0rd!"},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert not User.objects.filter(username="someoneelse").exists()
+
+
+def test_register_rejects_email_already_in_use_with_different_case(
+    api_client: APIClient, regular_user: User
+):
+    """Test that registration email uniqueness is case-insensitive, matching
+    ChangeEmailSerializer - "Alice@Example.com" can't duplicate "alice@example.com"."""
+    url = reverse("user-register")
+
+    response = api_client.post(
+        url,
+        {
+            "username": "someoneelse",
+            "email": str(regular_user.email).upper(),
+            "password": "C0mplexPassw0rd!",
+        },
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert not User.objects.filter(username="someoneelse").exists()
+
+
 def test_login_with_correct_credentials_returns_tokens(
     api_client: APIClient, regular_user: User, test_password: str
 ):
