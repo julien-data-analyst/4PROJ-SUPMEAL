@@ -59,13 +59,105 @@ def test_creating_a_planning_without_icon_gets_the_hardcoded_default(auth_client
 def test_creating_a_planning_with_a_custom_icon_uses_it(auth_client: APIClient):
     """Test that an explicit ``icon`` overrides the hard-coded default."""
     url = reverse("planning-list")
-    custom_icon = "data:image/png;base64,AAAA"
+    custom_icon = "data:image/png;base64,iVBORw0KGgo="
 
     response = auth_client.post(url, {"name": "Semaine vide", "icon": custom_icon}, format="json")
 
     assert response.status_code == status.HTTP_201_CREATED
     assert response.data is not None
     assert response.data["icon"] == custom_icon
+
+
+def test_creating_planning_rejects_disallowed_icon_type(auth_client: APIClient):
+    """Test that a planning icon must be a PNG/JPEG/SVG data URI (see
+    common.image_validation.validate_image_data_uri)."""
+    url = reverse("planning-list")
+
+    response = auth_client.post(
+        url,
+        {"name": "Mauvaise icone", "icon": "data:image/gif;base64,R0lGODlhAQABAAAAACw="},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert not Planning.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        name="Mauvaise icone"
+    ).exists()
+
+
+def test_creating_a_planning_without_type_defaults_to_weekly(auth_client: APIClient):
+    """Test that a planning created without a ``type`` defaults to "hebdomadaire"."""
+    url = reverse("planning-list")
+
+    response = auth_client.post(url, {"name": "Semaine vide"}, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data is not None
+    assert response.data["type"] == Planning.Type.WEEKLY
+
+
+def test_owner_can_create_a_daily_planning_with_six_meals(
+    auth_client: APIClient, regular_user: User
+):
+    """Test that a "journalier" planning can hold a full day of 6 meals (2 moments x 3
+    courses)."""
+    recipes = [Recipe.objects.create(title=f"Recette {i}", creator=regular_user) for i in range(6)]  # pyright: ignore[reportAttributeAccessIssue]
+    url = reverse("planning-list")
+    meals = [
+        {"recipe": recipes[0].pk, "dayofweek": "lundi", "lunch": "midi", "type": "entree"},
+        {"recipe": recipes[1].pk, "dayofweek": "lundi", "lunch": "midi", "type": "plat"},
+        {"recipe": recipes[2].pk, "dayofweek": "lundi", "lunch": "midi", "type": "dessert"},
+        {"recipe": recipes[3].pk, "dayofweek": "lundi", "lunch": "soir", "type": "entree"},
+        {"recipe": recipes[4].pk, "dayofweek": "lundi", "lunch": "soir", "type": "plat"},
+        {"recipe": recipes[5].pk, "dayofweek": "lundi", "lunch": "soir", "type": "dessert"},
+    ]
+
+    response = auth_client.post(
+        url,
+        {"name": "Journee complete", "type": Planning.Type.DAILY, "meals": meals},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data is not None
+    assert response.data["type"] == Planning.Type.DAILY
+    assert len(response.data["meals"]) == 6
+
+
+def test_daily_planning_rejects_meals_on_more_than_one_day(
+    auth_client: APIClient, entree_recipe: Recipe, plat_recipe: Recipe
+):
+    """Test that a "journalier" planning can't schedule meals across several days."""
+    url = reverse("planning-list")
+    meals = [
+        {"recipe": entree_recipe.pk, "dayofweek": "lundi", "lunch": "midi", "type": "entree"},
+        {"recipe": plat_recipe.pk, "dayofweek": "mardi", "lunch": "midi", "type": "plat"},
+    ]
+
+    response = auth_client.post(
+        url,
+        {"name": "Journee invalide", "type": Planning.Type.DAILY, "meals": meals},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert not Planning.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        name="Journee invalide"
+    ).exists()
+
+
+def test_creating_planning_rejects_invalid_type(auth_client: APIClient):
+    """Test that ``type`` is restricted to "journalier"/"hebdomadaire"."""
+    url = reverse("planning-list")
+
+    response = auth_client.post(
+        url, {"name": "Type invalide", "type": "mensuel"}, format="json"
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert not Planning.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        name="Type invalide"
+    ).exists()
 
 
 def test_owner_can_schedule_a_full_day_of_six_meals(auth_client: APIClient, regular_user: User):

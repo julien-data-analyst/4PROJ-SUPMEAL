@@ -19,13 +19,21 @@ class Planning(models.Model):
     """A named meal plan created by a user (the schema's ``planning`` table).
 
     Optionally scoped to a ``Cookbook`` (nullable, like ``Recipe.cookbook``);
-    the actual recipes assigned to the plan live on ``RecipePlanning``.
+    the actual recipes assigned to the plan live on ``RecipePlanning``. Not
+    part of the original SQL schema (``docs/database.md``) - ``type``
+    distinguishes a single-day plan (``DAILY``, up to 6 meals) from a
+    plan spanning the week's first 7 days (``WEEKLY``, up to 42 meals).
     """
+
+    class Type(models.TextChoices):
+        DAILY = "journalier", "Journalier"  # pyright: ignore[reportAssignmentType]
+        WEEKLY = "hebdomadaire", "Hebdomadaire"  # pyright: ignore[reportAssignmentType]
 
     name = models.CharField(max_length=255)
     icon = models.TextField(  # noqa: DJ001 (nullable, optional)
         blank=True, null=True, default=DEFAULT_PLANNING_ICON
     )
+    type = models.CharField(max_length=20, choices=Type.choices, default=Type.WEEKLY)
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="plannings"
     )
