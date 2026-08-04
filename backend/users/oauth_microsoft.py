@@ -76,7 +76,9 @@ def _unique_username(base: str) -> str:
 def get_or_create_user_from_microsoft(profile: dict, access_token: str) -> tuple[User, bool]:
     """Get or create a ``User`` + linked ``OAuthUser`` from a Microsoft Graph profile.
 
-    Users are matched by email, since ``OAuthUser`` has no external id field
+    Users are matched by email (case-insensitively, like every other email
+    lookup in this app - see ``UserRegisterSerializer.validate_email`` and
+    ``link_microsoft_account``), since ``OAuthUser`` has no external id field
     of its own. Returns ``(user, created)``.
     """
     email = profile.get("mail") or profile.get("userPrincipalName")
@@ -87,7 +89,7 @@ def get_or_create_user_from_microsoft(profile: dict, access_token: str) -> tuple
     profile_icon = GRAPH_PHOTO_URL if has_microsoft_photo(access_token) else ""
 
     with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(email__iexact=email).first()
         created = False
         if user is None:
             base_username = (profile.get("userPrincipalName") or email).split("@")[0]
@@ -113,3 +115,43 @@ def get_or_create_user_from_microsoft(profile: dict, access_token: str) -> tuple
         )
 
     return user, created
+
+
+def link_microsoft_account(user: User, profile: dict, access_token: str) -> User:
+    """Link a Microsoft identity to an already-authenticated ``user``.
+
+    Unlike ``get_or_create_user_from_microsoft`` (used for login/registration,
+    which matches-or-creates a user by email), this always targets the given
+    ``user`` - used by the "connect my Microsoft account" settings action.
+    Syncs ``user.email`` to the Microsoft profile's email (a future OAuth
+    login must match this same user by email) and makes the local password
+    unusable, since sign-in now only happens through Microsoft.
+    """
+    email = profile.get("mail") or profile.get("userPrincipalName")
+    if not email:
+        raise MicrosoftOAuthError("Microsoft account has no email or userPrincipalName.")
+
+    if User.objects.exclude(pk=user.pk).filter(email__iexact=email).exists():
+        raise MicrosoftOAuthError(
+            "This Microsoft account's email is already used by another account."
+        )
+
+    domain = email.split("@")[-1]
+    profile_icon = GRAPH_PHOTO_URL if has_microsoft_photo(access_token) else ""
+
+    with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
+        user.email = email
+        user.set_unusable_password()
+        user.save()
+
+        OAuthUser.objects.update_or_create(  # pyright: ignore[reportAttributeAccessIssue]
+            provider="microsoft",
+            user=user,
+            defaults={
+                "provider_url": settings.AZURE_AUTHORITY,
+                "profile_icon": profile_icon,
+                "domain": domain,
+            },
+        )
+
+    return user

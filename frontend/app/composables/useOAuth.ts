@@ -1,18 +1,29 @@
 import { useApi } from "./useAPI";
-import { useAuth, type AuthResponse } from "./useAuth";
+import { useAuth, type AuthResponse, type User } from "./useAuth";
+import type { LinkMicrosoftResponse } from "~/stores/useUserStore";
 
 type OAuthProvider = "microsoft";
+// "login" signs the browser in as whichever account matches the provider's
+// email (creating one if needed). "link" instead attaches the provider to
+// the currently-authenticated account - see LinkMicrosoftOAuthView on the
+// backend - and never touches the session's tokens.
+export type OAuthMode = "login" | "link";
+
+export interface FinishOAuthResult {
+  mode: OAuthMode;
+  user: User;
+}
 
 export const useOAuth = () => {
   const api = useApi();
-  const { setSession } = useAuth();
+  const { setSession, updateUser } = useAuth();
   const config = useRuntimeConfig();
 
   /////////////////////////////////
   // Step 1 : redirect the browser to the provider to start the flow
   /////////////////////////////////
 
-  const startOAuth = (provider: OAuthProvider) => {
+  const startOAuth = (provider: OAuthProvider, mode: OAuthMode = "login") => {
     if (provider !== "microsoft") {
       throw new Error(`Fournisseur OAuth non supporté : ${provider}`);
     }
@@ -29,6 +40,10 @@ export const useOAuth = () => {
       redirect_uri: config.public.azureRedirectUri,
       response_mode: "query",
       scope: "openid profile email User.Read",
+      // Echoed back verbatim on the callback query string - lets the
+      // callback page tell a login attempt from a link attempt apart
+      // without needing a second Azure app registration/redirect URI.
+      state: mode,
     });
 
     window.location.href = `${config.public.azureAuthority}/oauth2/v2.0/authorize?${params}`;
@@ -38,12 +53,15 @@ export const useOAuth = () => {
   // Step 2 : finalize the OAuth provider from the callback page
   /////////////////////////////////
 
-  const finishOAuth = async (provider: OAuthProvider) => {
+  const finishOAuth = async (
+    provider: OAuthProvider,
+  ): Promise<FinishOAuthResult> => {
     const route = useRoute();
 
     const code = route.query.code;
     const error = route.query.error;
     const errorDescription = route.query.error_description;
+    const mode: OAuthMode = route.query.state === "link" ? "link" : "login";
 
     // In case of error, return it
     if (typeof error === "string" && error !== "") {
@@ -61,12 +79,21 @@ export const useOAuth = () => {
 
     // Hand the code to the backend, which performs the actual exchange with Microsoft
     try {
+      if (mode === "link") {
+        const response = await api.post<LinkMicrosoftResponse>(
+          `/users/oauth/${provider}/link/`,
+          { code },
+        );
+        updateUser(response.user);
+        return { mode, user: response.user };
+      }
+
       const response = await api.post<AuthResponse>(
         `/users/oauth/${provider}/`,
         { code },
       );
       setSession(response);
-      return response.user;
+      return { mode, user: response.user };
     } catch (cause: unknown) {
       console.error("Erreur finishOAuth:", cause);
 

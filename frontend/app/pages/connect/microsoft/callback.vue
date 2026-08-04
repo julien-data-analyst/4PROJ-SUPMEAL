@@ -7,11 +7,18 @@ definePageMeta({ layout: "empty" });
 const { finishOAuth } = useOAuth();
 
 const error = ref("");
+// Known before finishOAuth resolves - read directly off the callback URL so
+// the error state can still offer the right "go back" link if it throws.
+const isLinkAttempt = useRoute().query.state === "link";
 
 onMounted(async () => {
   try {
-    await finishOAuth("microsoft");
-    await navigateTo("/home");
+    const result = await finishOAuth("microsoft");
+    if (result.mode === "link") {
+      await navigateTo({ path: "/settings", query: { linked: "microsoft" } });
+    } else {
+      await navigateTo("/home");
+    }
   } catch (cause) {
     error.value =
       cause instanceof Error
@@ -31,16 +38,22 @@ onMounted(async () => {
       <AppLogo size="md" />
 
       <p v-if="!error" class="mt-6 text-sm text-gray-500 sm:text-base">
-        Connexion à votre compte Microsoft...
+        {{
+          isLinkAttempt
+            ? "Liaison de votre compte Microsoft..."
+            : "Connexion à votre compte Microsoft..."
+        }}
       </p>
 
       <template v-else>
         <p class="mt-6 text-sm text-sup-red-error">{{ error }}</p>
         <NuxtLink
-          to="/login"
+          :to="isLinkAttempt ? '/settings' : '/login'"
           class="mt-4 inline-block font-semibold text-sup-dark-green"
         >
-          Retour à la connexion
+          {{
+            isLinkAttempt ? "Retour aux paramètres" : "Retour à la connexion"
+          }}
         </NuxtLink>
       </template>
     </div>

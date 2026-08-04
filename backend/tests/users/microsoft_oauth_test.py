@@ -132,6 +132,33 @@ def test_microsoft_oauth_links_to_existing_user_by_email(api_client: APIClient, 
     ).exists()
 
 
+def test_microsoft_oauth_links_to_existing_user_by_email_case_insensitively(
+    api_client: APIClient, make_user
+):
+    """Matching by email must be case-insensitive, or a differently-cased Microsoft
+    profile email would create a duplicate account instead of linking to the existing
+    one - see UserRegisterSerializer.validate_email for the same rule at registration."""
+    existing_user = make_user(username="janedoe", email="Jane.Doe@Contoso.com")
+    url = reverse("oauth-microsoft")
+
+    with (
+        patch(
+            "users.oauth_microsoft._confidential_client",
+            return_value=_mock_confidential_client(),
+        ),
+        patch("users.oauth_microsoft.requests.get", side_effect=_mock_graph_get(has_photo=True)),
+    ):
+        response = api_client.post(url, {"code": "auth-code"}, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data is not None
+    assert User.objects.filter(email__iexact="jane.doe@contoso.com").count() == 1
+    assert response.data["user"]["id"] == existing_user.pk
+    assert OAuthUser.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        user=existing_user, provider="microsoft"
+    ).exists()
+
+
 def test_microsoft_oauth_with_invalid_code_returns_400(api_client: APIClient):
     url = reverse("oauth-microsoft")
 
@@ -157,5 +184,80 @@ def test_microsoft_oauth_rejects_get_requests(api_client: APIClient):
     url = reverse("oauth-microsoft")
 
     response = api_client.get(url)
+
+    assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+
+##########################################################-
+# Tests for linking Microsoft OAuth to an already-authenticated account
+##########################################################-
+
+
+def test_link_microsoft_requires_authentication(api_client: APIClient):
+    url = reverse("oauth-microsoft-link")
+
+    response = api_client.post(url, {"code": "auth-code"}, format="json")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_local_user_can_link_microsoft_account(api_client: APIClient, regular_user: User):
+    """Linking syncs the account's email to the Microsoft profile's and makes its local
+    password unusable - it can only sign in via Microsoft afterwards."""
+    api_client.force_authenticate(user=regular_user)
+    url = reverse("oauth-microsoft-link")
+
+    with (
+        patch(
+            "users.oauth_microsoft._confidential_client",
+            return_value=_mock_confidential_client(),
+        ),
+        patch("users.oauth_microsoft.requests.get", side_effect=_mock_graph_get(has_photo=True)),
+    ):
+        response = api_client.post(url, {"code": "auth-code"}, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data is not None
+    assert response.data["user"]["id"] == regular_user.pk
+
+    regular_user.refresh_from_db()
+    assert regular_user.email == "jane.doe@contoso.com"
+    assert not regular_user.has_usable_password()
+    oauth_account = OAuthUser.objects.get(  # pyright: ignore[reportAttributeAccessIssue]
+        user=regular_user, provider="microsoft"
+    )
+    assert oauth_account.domain == "contoso.com"
+
+
+def test_linking_microsoft_account_already_used_by_another_user_fails(
+    api_client: APIClient, regular_user: User, make_user
+):
+    """Linking must not silently steal or merge with another account's email."""
+    make_user(username="janedoe", email="jane.doe@contoso.com")
+    api_client.force_authenticate(user=regular_user)
+    url = reverse("oauth-microsoft-link")
+
+    with (
+        patch(
+            "users.oauth_microsoft._confidential_client",
+            return_value=_mock_confidential_client(),
+        ),
+        patch("users.oauth_microsoft.requests.get", side_effect=_mock_graph_get(has_photo=True)),
+    ):
+        response = api_client.post(url, {"code": "auth-code"}, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    regular_user.refresh_from_db()
+    assert regular_user.email != "jane.doe@contoso.com"
+    assert regular_user.has_usable_password()
+    assert not OAuthUser.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+        user=regular_user
+    ).exists()
+
+
+def test_link_microsoft_rejects_get_requests(auth_client: APIClient):
+    url = reverse("oauth-microsoft-link")
+
+    response = auth_client.get(url)
 
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED

@@ -4,9 +4,11 @@ import AppInput from "~/components/forms/AppInput.vue";
 import ConfirmModal from "~/components/common/ConfirmModal.vue";
 import IconUser from "~/components/icons/IconUser.vue";
 import IconCamera from "~/components/icons/IconCamera.vue";
+import IconMicrosoft from "~/components/icons/IconMicrosoft.vue";
 import { useAuth } from "~/composables/useAuth";
 import { useUserStore } from "~/stores/useUserStore";
 import { useToastStore } from "~/stores/useToastStore";
+import { useOAuth } from "~/composables/useOAuth";
 import { useFormValidation } from "~/composables/managingUser/useZodForm";
 import { changeUsernameSchema } from "~/composables/managingUser/schemas";
 import { useChangeEmail } from "~/composables/managingUser/changeemail";
@@ -18,11 +20,20 @@ definePageMeta({ layout: "app" });
 const { user } = useAuth();
 const userStore = useUserStore();
 const toast = useToastStore();
+const { startOAuth } = useOAuth();
 
 const isOAuth = computed(() => user.value?.is_oauth ?? false);
 
+onMounted(() => {
+  if (useRoute().query.linked === "microsoft") {
+    toast.success("Compte Microsoft lié avec succès.");
+  }
+});
+
 // Avatar: pick a file -> preview it -> explicit save (the preview itself
-// is the confirmation step, no popup needed here).
+// is the confirmation step, no popup needed here). Available to every
+// account, OAuth included - it simply overrides the avatar synced from
+// the provider.
 const avatarInput = ref<HTMLInputElement | null>(null);
 const avatarPreview = ref<string | null>(null);
 const isSavingAvatar = ref(false);
@@ -87,13 +98,14 @@ const confirmUsernameChange = async () => {
   }
 };
 
-// Email: validate -> confirm popup -> save.
+// Email: validate -> confirm popup -> save. For an OAuth-only account this
+// also creates a local password and unlinks OAuth (see useChangeEmail).
 const {
   form: emailForm,
   errors: emailErrors,
   validate: validateEmail,
   submit: submitEmailChange,
-} = useChangeEmail();
+} = useChangeEmail(isOAuth.value);
 emailForm.email = user.value?.email ?? "";
 const emailConfirmOpen = ref(false);
 
@@ -106,6 +118,12 @@ const confirmEmailChange = async () => {
   emailConfirmOpen.value = false;
 };
 
+const emailConfirmMessage = computed(() =>
+  isOAuth.value
+    ? `Confirmer la nouvelle adresse email : ${emailForm.email} ? Un mot de passe local sera créé et vous ne pourrez plus vous connecter via OAuth avec ce compte.`
+    : `Confirmer la nouvelle adresse email : ${emailForm.email} ?`,
+);
+
 // Password: no popup, the current-password field is itself the confirmation.
 const {
   form: passwordForm,
@@ -113,6 +131,22 @@ const {
   isSubmitting: isSavingPassword,
   submit: submitPasswordChange,
 } = useChangePassword();
+
+// Linking a Microsoft account: redirects to Microsoft, so a confirm popup
+// (rather than the preview/undo patterns above) is the only way to warn the
+// user before they leave the page.
+const linkConfirmOpen = ref(false);
+
+const onConfirmLinkMicrosoft = () => {
+  linkConfirmOpen.value = false;
+  try {
+    startOAuth("microsoft", "link");
+  } catch (cause) {
+    toast.error(
+      cause instanceof Error ? cause.message : "Liaison Microsoft impossible.",
+    );
+  }
+};
 
 // Account deletion.
 const deleteAccountConfirmOpen = ref(false);
@@ -155,44 +189,42 @@ const confirmDeleteAccount = async () => {
           <IconUser v-else size="lg" />
         </div>
 
-        <template v-if="!isOAuth">
-          <div v-if="!avatarPreview" class="flex flex-col gap-1">
-            <AppButton
-              variant="secondary"
-              size="sm"
-              @click="avatarInput?.click()"
+        <div v-if="!avatarPreview" class="flex flex-col gap-1">
+          <AppButton
+            variant="secondary"
+            size="sm"
+            @click="avatarInput?.click()"
+          >
+            <template #icon><IconCamera size="xs" /></template>
+            Changer l'avatar
+          </AppButton>
+          <span class="text-[11px] text-gray-400">
+            PNG, JPEG ou SVG
+            <template v-if="isOAuth"
+              >- remplace l'avatar synchronisé depuis OAuth</template
             >
-              <template #icon><IconCamera size="xs" /></template>
-              Changer l'avatar
-            </AppButton>
-            <span class="text-[11px] text-gray-400">PNG, JPEG ou SVG</span>
-          </div>
-          <div v-else class="flex items-center gap-2">
-            <AppButton
-              variant="primary"
-              size="sm"
-              :disabled="isSavingAvatar"
-              @click="saveAvatar"
-            >
-              {{
-                isSavingAvatar ? "Enregistrement..." : "Enregistrer l'avatar"
-              }}
-            </AppButton>
-            <AppButton variant="ghost" size="sm" @click="cancelAvatarPreview">
-              Annuler
-            </AppButton>
-          </div>
-          <input
-            ref="avatarInput"
-            type="file"
-            accept="image/png,image/jpeg,image/svg+xml"
-            class="hidden"
-            @change="onAvatarPick"
-          />
-        </template>
-        <p v-else class="text-[12.5px] text-gray-400">
-          Avatar synchronisé depuis votre compte OAuth.
-        </p>
+          </span>
+        </div>
+        <div v-else class="flex items-center gap-2">
+          <AppButton
+            variant="primary"
+            size="sm"
+            :disabled="isSavingAvatar"
+            @click="saveAvatar"
+          >
+            {{ isSavingAvatar ? "Enregistrement..." : "Enregistrer l'avatar" }}
+          </AppButton>
+          <AppButton variant="ghost" size="sm" @click="cancelAvatarPreview">
+            Annuler
+          </AppButton>
+        </div>
+        <input
+          ref="avatarInput"
+          type="file"
+          accept="image/png,image/jpeg,image/svg+xml"
+          class="hidden"
+          @change="onAvatarPick"
+        />
       </div>
 
       <!-- Username -->
@@ -236,6 +268,30 @@ const confirmDeleteAccount = async () => {
         </AppButton>
       </div>
 
+      <template v-if="isOAuth">
+        <p
+          class="-mt-2 mb-4 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-4 py-3 text-[12.5px] text-[#8A6D00]"
+        >
+          Compte connecté via OAuth : changer d'adresse email nécessite de créer
+          un mot de passe local. Vous ne pourrez ensuite plus vous connecter via
+          OAuth avec ce compte.
+        </p>
+        <AppInput
+          id="email-new-password"
+          v-model="emailForm.newPassword"
+          type="password"
+          label="Nouveau mot de passe"
+          :error="emailErrors.newPassword"
+        />
+        <AppInput
+          id="email-new-password-confirm"
+          v-model="emailForm.newPasswordConfirm"
+          type="password"
+          label="Confirmer le mot de passe"
+          :error="emailErrors.newPasswordConfirm"
+        />
+      </template>
+
       <!-- Password -->
       <template v-if="!isOAuth">
         <AppInput
@@ -275,8 +331,29 @@ const confirmDeleteAccount = async () => {
         class="mb-5 rounded-md bg-sup-light-gray px-4 py-3 text-[12.5px] text-gray-500"
       >
         Vous êtes connecté via un compte OAuth : le mot de passe ne peut pas
-        être modifié ici.
+        être modifié ici. Pour utiliser un mot de passe local, changez d'adresse
+        email ci-dessus.
       </p>
+
+      <!-- Comptes liés -->
+      <div v-if="!isOAuth" class="mt-6 rounded-md border border-sup-border p-4">
+        <p class="mb-1 text-[14px] font-semibold text-sup-very-gray">
+          Comptes liés
+        </p>
+        <p class="mb-3 text-[12.5px] text-gray-500">
+          Lier un compte Microsoft vous permet de vous connecter avec celui-ci.
+          Attention : une fois lié, vous ne pourrez plus vous connecter avec un
+          mot de passe local, uniquement via Microsoft.
+        </p>
+        <AppButton
+          variant="secondary"
+          size="sm"
+          @click="linkConfirmOpen = true"
+        >
+          <template #icon><IconMicrosoft size="xs" /></template>
+          Lier mon compte Microsoft
+        </AppButton>
+      </div>
 
       <!-- Danger zone -->
       <div class="mt-6 rounded-md border border-red-200 bg-sup-red-error/5 p-4">
@@ -308,9 +385,18 @@ const confirmDeleteAccount = async () => {
     <ConfirmModal
       :open="emailConfirmOpen"
       title="Changer d'adresse email"
-      :message="`Confirmer la nouvelle adresse email : ${emailForm.email} ?`"
+      :message="emailConfirmMessage"
       @close="emailConfirmOpen = false"
       @confirm="confirmEmailChange"
+    />
+
+    <ConfirmModal
+      :open="linkConfirmOpen"
+      title="Lier mon compte Microsoft"
+      message="Vous allez être redirigé vers Microsoft. Une fois la liaison effectuée, vous ne pourrez plus vous connecter avec un mot de passe local : seule la connexion Microsoft fonctionnera."
+      confirm-label="Continuer vers Microsoft"
+      @close="linkConfirmOpen = false"
+      @confirm="onConfirmLinkMicrosoft"
     />
 
     <ConfirmModal

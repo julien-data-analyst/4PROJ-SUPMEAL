@@ -46,6 +46,17 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id"]
 
+    def validate_email(self, value: str) -> str:
+        # `User.email` is `unique=True`, so ModelSerializer already rejects
+        # an exact duplicate - but that DB-level uniqueness (and the
+        # auto-generated validator built from it) is case-sensitive, which
+        # would let "alice@example.com" and "Alice@Example.com" both
+        # register. Match ChangeEmailSerializer's case-insensitive check so
+        # the same address can't be used twice under either flow.
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
     def create(self, validated_data: dict) -> User:
         password = validated_data.pop("password")
         user = User(**validated_data)
@@ -75,30 +86,47 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class ChangeEmailSerializer(serializers.Serializer):
+    """Changes the caller's email.
+
+    An OAuth-only account (no usable local password) may also change its
+    email, but must set ``new_password`` in the same request: Microsoft
+    OAuth login matches users by email, so changing it here breaks that
+    match - the account needs a local password to still be reachable
+    afterwards. See ``ChangeEmailView`` for what happens to its OAuth link.
+    """
+
     new_email = serializers.EmailField()
+    new_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def validate(self, attrs: dict) -> dict:
         user = self.context["request"].user
+        is_oauth = user.oauth_accounts.exists()
+        new_password = attrs.get("new_password") or ""
 
-        if user.oauth_accounts.exists():
-            raise serializers.ValidationError("OAuth accounts cannot change their email here.")
+        if is_oauth:
+            if not new_password:
+                raise serializers.ValidationError(
+                    {
+                        "new_password": (
+                            "A local password is required when changing the email of an "
+                            "OAuth-only account - you will no longer be able to sign in via "
+                            "OAuth afterwards."
+                        )
+                    }
+                )
+            validate_password(new_password)
 
         if User.objects.exclude(pk=user.pk).filter(email__iexact=attrs["new_email"]).exists():
-            raise serializers.ValidationError("This email is already in use.")
+            raise serializers.ValidationError({"new_email": "This email is already in use."})
 
         return attrs
 
 
 class ChangeAvatarSerializer(serializers.Serializer):
+    """Changes the caller's avatar - OAuth accounts included, overriding
+    whatever avatar was originally synced from the provider."""
+
     avatar = serializers.CharField(validators=[validate_image_data_uri])
-
-    def validate(self, attrs: dict) -> dict:
-        user = self.context["request"].user
-
-        if user.oauth_accounts.exists():
-            raise serializers.ValidationError("OAuth accounts cannot change their avatar here.")
-
-        return attrs
 
 
 class LogoutSerializer(serializers.Serializer):
