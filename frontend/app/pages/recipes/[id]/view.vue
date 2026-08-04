@@ -211,6 +211,7 @@ const {
       v-if="recipe"
       :open="deleteModalOpen"
       :recipe-title="recipe.title"
+      :used-in-plannings="recipe.used_in_plannings"
       @close="deleteModalOpen = false"
       @confirm="confirmDelete"
     />

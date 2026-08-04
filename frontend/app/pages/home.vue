@@ -1,24 +1,35 @@
 <script setup lang="ts">
 import AppButton from "~/components/buttons/AppButton.vue";
 import RecipeCard from "~/components/recipes/RecipeCard.vue";
+import PlanningCard from "~/components/planning/PlanningCard.vue";
 import IconPlus from "~/components/icons/IconPlus.vue";
 import IconUpload from "~/components/icons/IconUpload.vue";
 import IconDownload from "~/components/icons/IconDownload.vue";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
-import IconCalendar from "~/components/icons/IconCalendar.vue";
 import { useRecipes, sortFavoritesFirst } from "~/composables/useRecipes";
+import { usePlanning } from "~/composables/usePlanning";
 
 definePageMeta({ layout: "app" });
 
 const { store, fetchRecentRecipes } = useRecipes();
+const { store: planningStore, fetchRecentPlannings } = usePlanning();
 
 const isLoading = ref(true);
+const isPlanningLoading = ref(true);
 
 onMounted(async () => {
   try {
     await fetchRecentRecipes(3);
   } finally {
     isLoading.value = false;
+  }
+});
+
+onMounted(async () => {
+  try {
+    await fetchRecentPlannings(3);
+  } finally {
+    isPlanningLoading.value = false;
   }
 });
 
@@ -31,6 +42,13 @@ const recentRecipes = computed(() => {
   );
   return sortFavoritesFirst(byDate);
 });
+
+const recentPlannings = computed(() =>
+  [...planningStore.plannings].sort(
+    (a, b) =>
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+  ),
+);
 </script>
 
 <template>
@@ -120,12 +138,43 @@ const recentRecipes = computed(() => {
         <h2 class="text-[18px] font-semibold text-sup-very-gray">
           Mes plannings repas
         </h2>
+        <NuxtLink
+          to="/planning"
+          class="text-[13px] font-semibold text-sup-dark-green hover:underline"
+        >
+          Voir tout
+        </NuxtLink>
       </div>
+
       <div
-        class="flex items-center gap-3 rounded-[10px] border border-dashed border-sup-border bg-sup-withe p-6 text-[13px] text-gray-400"
+        v-if="isPlanningLoading"
+        class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
       >
-        <IconCalendar size="sm" />
-        Bientôt disponible.
+        <div
+          v-for="n in 3"
+          :key="n"
+          class="h-[76px] animate-pulse rounded-[10px] bg-sup-border/50"
+        />
+      </div>
+
+      <div
+        v-else-if="recentPlannings.length"
+        class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
+      >
+        <PlanningCard
+          v-for="planning in recentPlannings"
+          :key="planning.id"
+          :planning="planning"
+          :to="`/planning/${planning.id}/view`"
+        />
+      </div>
+
+      <div
+        v-else
+        class="rounded-[10px] border border-dashed border-sup-border bg-sup-withe p-8 text-center text-[13px] text-gray-400"
+      >
+        Vous n'avez pas encore de planning. Créez votre premier planning de
+        repas !
       </div>
     </section>
   </div>

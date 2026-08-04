@@ -2,17 +2,8 @@
 import AppButton from "~/components/buttons/AppButton.vue";
 import IconClose from "~/components/icons/IconClose.vue";
 import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
-import IconCalendar from "~/components/icons/IconCalendar.vue";
-import type { PlanningUsage } from "~/stores/useRecipeStore";
 
-const props = withDefaults(
-  defineProps<{
-    open: boolean;
-    recipeTitle: string;
-    usedInPlannings?: PlanningUsage[];
-  }>(),
-  { usedInPlannings: () => [] },
-);
+const props = defineProps<{ open: boolean; planningName: string }>();
 const emit = defineEmits<{ close: []; confirm: [] }>();
 
 const confirmText = ref("");
@@ -54,7 +45,7 @@ const onConfirm = async () => {
           class="flex items-center justify-between border-b border-sup-border px-5 py-[18px]"
         >
           <p class="text-[16px] font-semibold text-sup-very-gray">
-            Supprimer la recette
+            Supprimer le planning
           </p>
           <button
             type="button"
@@ -71,33 +62,9 @@ const onConfirm = async () => {
           >
             <IconAlertTriangle size="xs" class="shrink-0" />
             <span>
-              Cette action est irréversible. La recette « {{ recipeTitle }} »
-              sera définitivement supprimée.
+              Cette action est irréversible. Le planning « {{ planningName }}
+              » sera définitivement supprimé.
             </span>
-          </div>
-
-          <div
-            v-if="usedInPlannings.length"
-            class="mb-4 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-[14px] py-[10px] text-[12.5px] font-medium text-[#8A6D00]"
-          >
-            <div class="flex items-center gap-2">
-              <IconCalendar size="xs" class="shrink-0" />
-              <span>
-                Utilisée dans {{ usedInPlannings.length }} planning{{
-                  usedInPlannings.length > 1 ? "s" : ""
-                }}
-                : elle en sera retirée.
-              </span>
-            </div>
-            <ul class="mt-1.5 flex flex-wrap gap-1.5 pl-6">
-              <li
-                v-for="planning in usedInPlannings"
-                :key="planning.id"
-                class="rounded-full bg-sup-withe px-2.5 py-0.5 text-[11px] font-semibold"
-              >
-                {{ planning.name }}
-              </li>
-            </ul>
           </div>
 
           <div class="my-[14px]">
@@ -125,7 +92,7 @@ const onConfirm = async () => {
             :disabled="!canConfirm || isDeleting"
             @click="onConfirm"
           >
-            {{ isDeleting ? "Suppression..." : "Supprimer la recette" }}
+            {{ isDeleting ? "Suppression..." : "Supprimer le planning" }}
           </AppButton>
         </div>
       </div>

@@ -15,6 +15,23 @@ def _names(response) -> list[str]:
 
 
 ##########################-
+# type
+##########################-
+
+
+def test_type_filter_matches_exact_planning_type(auth_client: APIClient, regular_user: User):
+    """Test that ``?type=`` filters plannings by their exact type."""
+    daily = Planning(name="Journee", creator=regular_user, type=Planning.Type.DAILY)
+    daily.save()
+    Planning(name="Semaine", creator=regular_user, type=Planning.Type.WEEKLY).save()
+    url = reverse("planning-list")
+
+    response = auth_client.get(url, {"type": Planning.Type.DAILY})
+
+    assert _names(response) == [daily.name]
+
+
+##########################-
 # cookbook / in_cookbook
 ##########################-
 

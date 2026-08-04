@@ -35,6 +35,11 @@ export interface RecipeIngredientLine {
   person_numbers: number;
 }
 
+export interface PlanningUsage {
+  id: number;
+  name: string;
+}
+
 export interface Recipe {
   id: number;
   title: string;
@@ -47,6 +52,7 @@ export interface Recipe {
   tags: Tag[];
   steps: Step[];
   is_favorite: boolean;
+  used_in_plannings: PlanningUsage[];
   created_at: string;
   updated_at: string;
 }
