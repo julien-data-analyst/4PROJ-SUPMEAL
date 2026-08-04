@@ -108,16 +108,12 @@ class PlanningWriteSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs: dict) -> dict:
         meals = attrs.get("meals")
-        planning_type = attrs.get(
-            "type", getattr(self.instance, "type", Planning.Type.WEEKLY)
-        )
+        planning_type = attrs.get("type", getattr(self.instance, "type", Planning.Type.WEEKLY))
         if meals and planning_type == Planning.Type.DAILY:
             days = {meal["dayofweek"] for meal in meals}
             if len(days) > 1:
                 raise serializers.ValidationError(
-                    {
-                        "meals": "A daily planning can only schedule meals for a single day."
-                    }
+                    {"meals": "A daily planning can only schedule meals for a single day."}
                 )
         return attrs
 
