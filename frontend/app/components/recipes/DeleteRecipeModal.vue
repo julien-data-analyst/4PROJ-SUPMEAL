@@ -2,8 +2,17 @@
 import AppButton from "~/components/buttons/AppButton.vue";
 import IconClose from "~/components/icons/IconClose.vue";
 import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
+import IconCalendar from "~/components/icons/IconCalendar.vue";
+import type { PlanningUsage } from "~/stores/useRecipeStore";
 
-const props = defineProps<{ open: boolean; recipeTitle: string }>();
+const props = withDefaults(
+  defineProps<{
+    open: boolean;
+    recipeTitle: string;
+    usedInPlannings?: PlanningUsage[];
+  }>(),
+  { usedInPlannings: () => [] },
+);
 const emit = defineEmits<{ close: []; confirm: [] }>();
 
 const confirmText = ref("");
@@ -65,6 +74,30 @@ const onConfirm = async () => {
               Cette action est irréversible. La recette « {{ recipeTitle }} »
               sera définitivement supprimée.
             </span>
+          </div>
+
+          <div
+            v-if="usedInPlannings.length"
+            class="mb-4 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-[14px] py-[10px] text-[12.5px] font-medium text-[#8A6D00]"
+          >
+            <div class="flex items-center gap-2">
+              <IconCalendar size="xs" class="shrink-0" />
+              <span>
+                Utilisée dans {{ usedInPlannings.length }} planning{{
+                  usedInPlannings.length > 1 ? "s" : ""
+                }}
+                : elle en sera retirée.
+              </span>
+            </div>
+            <ul class="mt-1.5 flex flex-wrap gap-1.5 pl-6">
+              <li
+                v-for="planning in usedInPlannings"
+                :key="planning.id"
+                class="rounded-full bg-sup-withe px-2.5 py-0.5 text-[11px] font-semibold"
+              >
+                {{ planning.name }}
+              </li>
+            </ul>
           </div>
 
           <div class="my-[14px]">

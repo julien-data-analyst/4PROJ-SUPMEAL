@@ -218,6 +218,7 @@ const {
     <DeleteRecipeModal
       :open="deleteModalOpen"
       :recipe-title="title"
+      :used-in-plannings="currentRecipe?.used_in_plannings"
       @close="deleteModalOpen = false"
       @confirm="confirmDelete"
     />
