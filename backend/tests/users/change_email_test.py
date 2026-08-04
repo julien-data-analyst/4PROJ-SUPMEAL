@@ -52,9 +52,7 @@ def test_change_email_rejects_get_requests(auth_client: APIClient):
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
 
-def test_oauth_user_can_change_email_with_a_new_password(
-    api_client: APIClient, oauth_user: User
-):
+def test_oauth_user_can_change_email_with_a_new_password(api_client: APIClient, oauth_user: User):
     """Changing an OAuth-only account's email also requires (and sets) a local password,
     and unlinks every OAuth identity - the account becomes local-only."""
     api_client.force_authenticate(user=oauth_user)

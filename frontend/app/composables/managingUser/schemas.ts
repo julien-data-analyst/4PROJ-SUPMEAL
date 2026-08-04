@@ -24,12 +24,16 @@ export function changeEmailSchema(requirePassword: boolean) {
       newPassword: z.string().optional(),
       newPasswordConfirm: z.string().optional(),
     })
-    .refine((data) => !requirePassword || (data.newPassword?.length ?? 0) >= 8, {
-      message: "Un mot de passe d'au moins 8 caractères est requis",
-      path: ["newPassword"],
-    })
     .refine(
-      (data) => !requirePassword || data.newPassword === data.newPasswordConfirm,
+      (data) => !requirePassword || (data.newPassword?.length ?? 0) >= 8,
+      {
+        message: "Un mot de passe d'au moins 8 caractères est requis",
+        path: ["newPassword"],
+      },
+    )
+    .refine(
+      (data) =>
+        !requirePassword || data.newPassword === data.newPasswordConfirm,
       {
         message: "Les mots de passe ne sont pas les mêmes",
         path: ["newPasswordConfirm"],

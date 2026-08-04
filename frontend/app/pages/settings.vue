@@ -212,9 +212,7 @@ const confirmDeleteAccount = async () => {
             :disabled="isSavingAvatar"
             @click="saveAvatar"
           >
-            {{
-              isSavingAvatar ? "Enregistrement..." : "Enregistrer l'avatar"
-            }}
+            {{ isSavingAvatar ? "Enregistrement..." : "Enregistrer l'avatar" }}
           </AppButton>
           <AppButton variant="ghost" size="sm" @click="cancelAvatarPreview">
             Annuler
@@ -274,9 +272,9 @@ const confirmDeleteAccount = async () => {
         <p
           class="-mt-2 mb-4 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-4 py-3 text-[12.5px] text-[#8A6D00]"
         >
-          Compte connecté via OAuth : changer d'adresse email nécessite de
-          créer un mot de passe local. Vous ne pourrez ensuite plus vous
-          connecter via OAuth avec ce compte.
+          Compte connecté via OAuth : changer d'adresse email nécessite de créer
+          un mot de passe local. Vous ne pourrez ensuite plus vous connecter via
+          OAuth avec ce compte.
         </p>
         <AppInput
           id="email-new-password"
@@ -333,22 +331,19 @@ const confirmDeleteAccount = async () => {
         class="mb-5 rounded-md bg-sup-light-gray px-4 py-3 text-[12.5px] text-gray-500"
       >
         Vous êtes connecté via un compte OAuth : le mot de passe ne peut pas
-        être modifié ici. Pour utiliser un mot de passe local, changez
-        d'adresse email ci-dessus.
+        être modifié ici. Pour utiliser un mot de passe local, changez d'adresse
+        email ci-dessus.
       </p>
 
       <!-- Comptes liés -->
-      <div
-        v-if="!isOAuth"
-        class="mt-6 rounded-md border border-sup-border p-4"
-      >
+      <div v-if="!isOAuth" class="mt-6 rounded-md border border-sup-border p-4">
         <p class="mb-1 text-[14px] font-semibold text-sup-very-gray">
           Comptes liés
         </p>
         <p class="mb-3 text-[12.5px] text-gray-500">
           Lier un compte Microsoft vous permet de vous connecter avec celui-ci.
-          Attention : une fois lié, vous ne pourrez plus vous connecter avec
-          un mot de passe local, uniquement via Microsoft.
+          Attention : une fois lié, vous ne pourrez plus vous connecter avec un
+          mot de passe local, uniquement via Microsoft.
         </p>
         <AppButton
           variant="secondary"
