@@ -18,6 +18,7 @@ from .oauth_microsoft import (
     exchange_code_for_token,
     fetch_microsoft_profile,
     get_or_create_user_from_microsoft,
+    link_microsoft_account,
 )
 from .permissions import IsSelfOrStaff
 from .serializers import (
@@ -173,6 +174,70 @@ class MicrosoftOAuthView(APIView):
         return Response({"user": UserSerializer(user).data, **_tokens_for(user)})
 
 
+class LinkMicrosoftOAuthView(APIView):
+    """Links the authenticated user's own account to a Microsoft identity.
+
+    Unlike ``MicrosoftOAuthView`` (login/registration, ``AllowAny``), this
+    always targets ``request.user`` rather than matching/creating a user by
+    email - it's the "connect my Microsoft account" settings action. The
+    account's email is synced to the Microsoft profile's, and its local
+    password is made unusable: sign-in only works through Microsoft from
+    then on.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=MicrosoftOAuthSerializer,
+        responses=OpenApiTypes.OBJECT,
+        description=(
+            "Links the authenticated user's account to a Microsoft identity: exchanges "
+            "the authorization `code` for a Graph access token, fetches the profile, then "
+            "syncs the account's email to the Microsoft profile's email and makes its local "
+            "password unusable - **the account can only sign in via Microsoft OAuth "
+            "afterwards**. Fails with `400 Bad Request` if `code` is missing, the exchange "
+            "fails, the profile has no email, or that email already belongs to a *different* "
+            "account."
+        ),
+        examples=[
+            OpenApiExample(
+                "Microsoft account linked",
+                value={
+                    "user": AUTH_TOKENS_EXAMPLE["user"],
+                    "detail": (
+                        "Microsoft account linked successfully. You can only sign in with "
+                        "Microsoft from now on."
+                    ),
+                },
+                response_only=True,
+            ),
+        ],
+    )
+    def post(self, request: Request) -> Response:
+        serializer = MicrosoftOAuthSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            code = serializer.validated_data[  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
+                "code"
+            ]
+            access_token = exchange_code_for_token(code)
+            profile = fetch_microsoft_profile(access_token)
+            user = link_microsoft_account(request.user, profile, access_token)
+        except MicrosoftOAuthError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "user": UserSerializer(user).data,
+                "detail": (
+                    "Microsoft account linked successfully. You can only sign in with "
+                    "Microsoft from now on."
+                ),
+            }
+        )
+
+
 class ChangePasswordView(APIView):
     """View for changing the authenticated user's own password.
 
@@ -220,9 +285,12 @@ class ChangePasswordView(APIView):
 class ChangeEmailView(APIView):
     """View for changing the authenticated user's own email address.
 
-    Rejected for accounts that only have linked OAuth identities, since
-    Microsoft OAuth login matches users by email - letting them change it
-    here would desync the two.
+    An OAuth-only account may also change its email here, provided it sets
+    a `new_password` in the same request (enforced by ``ChangeEmailSerializer``)
+    - since Microsoft OAuth login matches users by email, changing it would
+    otherwise desync the two silently. Doing so also unlinks every OAuth
+    identity from the account (deleted, not just left stale) - the account
+    now signs in locally, with the password it was just given.
     """
 
     permission_classes = [IsAuthenticated]
@@ -231,14 +299,30 @@ class ChangeEmailView(APIView):
         request=ChangeEmailSerializer,
         responses=OpenApiTypes.OBJECT,
         description=(
-            "Changes the authenticated user's own email address. Fails with `400 Bad "
-            "Request` if `new_email` is already used by another account, or the account "
-            "only has linked OAuth identities."
+            "Changes the authenticated user's own email address. If the account only has "
+            "linked OAuth identities, `new_password` is also required in the same request: "
+            "the account's password is set to it and every linked `OAuthUser` is deleted, "
+            "so the account becomes local-only (sign-in via OAuth will no longer reach it). "
+            "Fails with `400 Bad Request` if `new_email` is already used by another account, "
+            "or an OAuth account omits `new_password`/gives one failing validation."
         ),
         examples=[
             OpenApiExample(
-                "Email changed",
-                value={"detail": "Email updated successfully.", "email": "new@example.com"},
+                "Email changed (local account)",
+                value={
+                    "detail": "Email updated successfully.",
+                    "email": "new@example.com",
+                    "oauth_unlinked": False,
+                },
+                response_only=True,
+            ),
+            OpenApiExample(
+                "Email changed (was OAuth-only, now local)",
+                value={
+                    "detail": "Email updated successfully.",
+                    "email": "new@example.com",
+                    "oauth_unlinked": True,
+                },
                 response_only=True,
             ),
         ],
@@ -246,12 +330,28 @@ class ChangeEmailView(APIView):
     def post(self, request: Request) -> Response:
         serializer = ChangeEmailSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
-        request.user.email = serializer.validated_data[  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
-            "new_email"
-        ]
-        request.user.save()
-        return Response({"detail": "Email updated successfully.", "email": request.user.email})
+        user = request.user
+        was_oauth = user.oauth_accounts.exists()  # pyright: ignore[reportAttributeAccessIssue]
+
+        user.email = data["new_email"]  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
+        if was_oauth:
+            user.set_password(
+                data["new_password"]  # pyright: ignore[reportOptionalSubscript, reportIndexIssue]
+            )
+        user.save()
+
+        if was_oauth:
+            user.oauth_accounts.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
+
+        return Response(
+            {
+                "detail": "Email updated successfully.",
+                "email": user.email,
+                "oauth_unlinked": was_oauth,
+            }
+        )
 
 
 class ChangeAvatarView(APIView):
@@ -259,8 +359,8 @@ class ChangeAvatarView(APIView):
 
     ``avatar`` is a base64 image data URI (PNG, JPEG or SVG only - see
     ``common.image_validation.validate_image_data_uri``), stored directly on
-    ``profile_icon``. Rejected for accounts that only have linked OAuth
-    identities, since their avatar is synced from the OAuth provider.
+    ``profile_icon``. Available to OAuth accounts too - this simply
+    overrides whatever avatar was originally synced from the provider.
     """
 
     permission_classes = [IsAuthenticated]
@@ -269,10 +369,10 @@ class ChangeAvatarView(APIView):
         request=ChangeAvatarSerializer,
         responses=OpenApiTypes.OBJECT,
         description=(
-            "Changes the authenticated user's own avatar. `avatar` must be a base64 data "
-            "URI for a PNG, JPEG or SVG image. Fails with `400 Bad Request` if the image "
-            "type isn't allowed, the data is malformed, or the account only has linked "
-            "OAuth identities."
+            "Changes the authenticated user's own avatar, including for OAuth accounts "
+            "(overrides the avatar synced from the provider). `avatar` must be a base64 "
+            "data URI for a PNG, JPEG or SVG image. Fails with `400 Bad Request` if the "
+            "image type isn't allowed or the data is malformed."
         ),
         examples=[
             OpenApiExample(
