@@ -79,6 +79,17 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class RecipePlanningUsageSerializer(serializers.Serializer):
+    """Minimal ``{id, name}`` of a planning that schedules a given recipe.
+
+    Used only to warn the caller, before/at delete time, which plannings a
+    recipe would be removed from - see ``RecipeSerializer.used_in_plannings``.
+    """
+
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
 class RecipeSerializer(serializers.ModelSerializer):
     """Read-only representation of a recipe, with its steps/ingredients/tags."""
 
@@ -87,6 +98,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
     steps = StepSerializer(many=True, read_only=True)
     is_favorite = serializers.BooleanField(read_only=True, default=False)
+    used_in_plannings = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
@@ -102,6 +114,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             "tags",
             "steps",
             "is_favorite",
+            "used_in_plannings",
             "created_at",
             "updated_at",
         ]
@@ -112,6 +125,16 @@ class RecipeSerializer(serializers.ModelSerializer):
         recipe_tags = obj.recipe_tags.all()  # pyright: ignore[reportAttributeAccessIssue]
         tags = [recipe_tag.tag for recipe_tag in recipe_tags]
         return TagSerializer(tags, many=True).data
+
+    @extend_schema_field(RecipePlanningUsageSerializer(many=True))
+    def get_used_in_plannings(self, obj: Recipe):
+        # Distinct plannings that schedule this recipe in at least one slot -
+        # relies on `recipe_plannings__planning` being prefetched by the
+        # viewset's queryset, so this doesn't add an N+1 query per recipe.
+        seen: dict[int, str] = {}
+        for recipe_planning in obj.recipe_plannings.all():  # pyright: ignore[reportAttributeAccessIssue]
+            seen[recipe_planning.planning_id] = recipe_planning.planning.name
+        return [{"id": planning_id, "name": name} for planning_id, name in seen.items()]
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):

@@ -262,7 +262,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 | models.Q(cookbook__shared_with__user=user)
             )
             .select_related("creator", "cookbook")
-            .prefetch_related("recipe_ingredients__ingredient", "recipe_tags__tag", "steps")
+            .prefetch_related(
+                "recipe_ingredients__ingredient",
+                "recipe_tags__tag",
+                "steps",
+                "recipe_plannings__planning",
+            )
             .annotate(
                 is_favorite=Exists(
                     FavoriteRecipe.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
@@ -285,14 +290,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_destroy(self, instance: Recipe) -> None:
-        # Steps/ingredients/tags/favorites are PROTECTed FKs to Recipe (no
-        # cascade), so they must be unlinked explicitly before the recipe
-        # itself can go.
+        # Steps/ingredients/tags/favorites/recipe_plannings/messages are all
+        # PROTECTed FKs to Recipe (no cascade), so they must be unlinked
+        # explicitly before the recipe itself can go. `recipe_plannings` in
+        # particular removes the recipe from every planning that scheduled
+        # it - the plannings themselves are left otherwise untouched.
         with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
             instance.recipe_ingredients.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
             instance.recipe_tags.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
             instance.steps.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
             instance.favorited_by.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
+            instance.recipe_plannings.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
+            instance.messages.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
             instance.delete()
 
     @action(detail=True, methods=["get"], url_path="export")

@@ -320,6 +320,20 @@ class CookbookViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer: CookbookWriteSerializer) -> None:
         serializer.save(creator=self.request.user)
 
+    def perform_destroy(self, instance: Cookbook) -> None:
+        # Recipe/Planning.cookbook, SharedUserCookbook.cookbook and
+        # Message.cookbook are all PROTECTed FKs to Cookbook (no cascade).
+        # Recipes/plannings filed in this cookbook survive as personal items
+        # (their `cookbook` is just cleared) rather than being deleted along
+        # with it; shares and messages only make sense in this cookbook's
+        # context, so those rows are dropped.
+        with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
+            instance.recipes.update(cookbook=None)  # pyright: ignore[reportAttributeAccessIssue]
+            instance.plannings.update(cookbook=None)  # pyright: ignore[reportAttributeAccessIssue]
+            instance.shared_with.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
+            instance.messages.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
+            instance.delete()
+
     @action(detail=True, methods=["post", "patch"])
     def share(self, request: Request, pk=None) -> Response:
         cookbook = self.get_object()
