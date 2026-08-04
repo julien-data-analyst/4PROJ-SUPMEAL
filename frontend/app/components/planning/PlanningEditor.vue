@@ -111,7 +111,9 @@ const {
               {{ PLANNING_TYPE_LABELS[type] }}
             </span>
             <span class="text-[12.5px] text-gray-400">
-              {{ scheduledCount }} repas planifié{{ scheduledCount > 1 ? "s" : "" }}
+              {{ scheduledCount }} repas planifié{{
+                scheduledCount > 1 ? "s" : ""
+              }}
             </span>
             <span v-if="currentPlanning" class="text-[12.5px] text-gray-400">
               · Dernière modification :
@@ -134,7 +136,9 @@ const {
         {{ saveError }}
       </p>
 
-      <div class="rounded-[14px] border border-sup-border bg-sup-withe p-[18px] shadow-sm">
+      <div
+        class="rounded-[14px] border border-sup-border bg-sup-withe p-[18px] shadow-sm"
+      >
         <MealPlanEditor
           :type="type"
           :slots="slots"
