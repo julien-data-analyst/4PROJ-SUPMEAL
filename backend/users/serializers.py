@@ -46,6 +46,17 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id"]
 
+    def validate_email(self, value: str) -> str:
+        # `User.email` is `unique=True`, so ModelSerializer already rejects
+        # an exact duplicate - but that DB-level uniqueness (and the
+        # auto-generated validator built from it) is case-sensitive, which
+        # would let "alice@example.com" and "Alice@Example.com" both
+        # register. Match ChangeEmailSerializer's case-insensitive check so
+        # the same address can't be used twice under either flow.
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
     def create(self, validated_data: dict) -> User:
         password = validated_data.pop("password")
         user = User(**validated_data)

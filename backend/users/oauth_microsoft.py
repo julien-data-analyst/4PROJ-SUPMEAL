@@ -76,7 +76,9 @@ def _unique_username(base: str) -> str:
 def get_or_create_user_from_microsoft(profile: dict, access_token: str) -> tuple[User, bool]:
     """Get or create a ``User`` + linked ``OAuthUser`` from a Microsoft Graph profile.
 
-    Users are matched by email, since ``OAuthUser`` has no external id field
+    Users are matched by email (case-insensitively, like every other email
+    lookup in this app - see ``UserRegisterSerializer.validate_email`` and
+    ``link_microsoft_account``), since ``OAuthUser`` has no external id field
     of its own. Returns ``(user, created)``.
     """
     email = profile.get("mail") or profile.get("userPrincipalName")
@@ -87,7 +89,7 @@ def get_or_create_user_from_microsoft(profile: dict, access_token: str) -> tuple
     profile_icon = GRAPH_PHOTO_URL if has_microsoft_photo(access_token) else ""
 
     with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(email__iexact=email).first()
         created = False
         if user is None:
             base_username = (profile.get("userPrincipalName") or email).split("@")[0]
