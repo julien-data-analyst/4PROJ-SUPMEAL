@@ -192,18 +192,18 @@ const recentPlannings = computed(() =>
 
       <div
         v-if="isPlanningLoading"
-        class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
+        class="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4"
       >
         <div
           v-for="n in 3"
           :key="n"
-          class="h-[76px] animate-pulse rounded-[10px] bg-sup-border/50"
+          class="h-[84px] animate-pulse rounded-[10px] bg-sup-border/50"
         />
       </div>
 
       <div
         v-else-if="recentPlannings.length"
-        class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
+        class="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4"
       >
         <PlanningCard
           v-for="planning in recentPlannings"

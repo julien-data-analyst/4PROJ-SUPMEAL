@@ -3,22 +3,52 @@ import AppButton from "~/components/buttons/AppButton.vue";
 import IconClose from "~/components/icons/IconClose.vue";
 import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
 
-const props = defineProps<{
-  open: boolean;
-  cookbookName: string;
-  recipeCount?: number;
-  planningCount?: number;
+export interface DeleteCookbookOptions {
+  keepRecipes: boolean;
+  keepPlannings: boolean;
+}
+
+const props = withDefaults(
+  defineProps<{
+    open: boolean;
+    cookbookName: string;
+    recipes?: { id: number; title: string }[];
+    plannings?: { id: number; name: string }[];
+  }>(),
+  { recipes: () => [], plannings: () => [] },
+);
+const emit = defineEmits<{
+  close: [];
+  confirm: [options: DeleteCookbookOptions];
 }>();
-const emit = defineEmits<{ close: []; confirm: [] }>();
 
 const confirmText = ref("");
 const isDeleting = ref(false);
+const keepRecipes = ref(true);
+const keepPlannings = ref(true);
 
 watch(
   () => props.open,
   (open) => {
-    if (open) confirmText.value = "";
+    if (open) {
+      confirmText.value = "";
+      keepRecipes.value = true;
+      keepPlannings.value = true;
+    }
   },
+);
+
+// A planning can't survive without the recipes its meals point to, so
+// keeping plannings only makes sense when recipes are kept too.
+watch(keepRecipes, (value) => {
+  if (!value) keepPlannings.value = false;
+});
+
+const recipesToDelete = computed(() =>
+  keepRecipes.value ? [] : props.recipes,
+);
+const planningsToDelete = computed(() =>
+  keepPlannings.value ? [] : props.plannings,
 );
 
 const canConfirm = computed(
@@ -29,7 +59,10 @@ const onConfirm = async () => {
   if (!canConfirm.value || isDeleting.value) return;
   isDeleting.value = true;
   try {
-    emit("confirm");
+    emit("confirm", {
+      keepRecipes: keepRecipes.value,
+      keepPlannings: keepPlannings.value,
+    });
   } finally {
     isDeleting.value = false;
   }
@@ -44,7 +77,7 @@ const onConfirm = async () => {
       @click.self="emit('close')"
     >
       <div
-        class="w-full max-w-[460px] max-h-[90vh] overflow-auto rounded-[14px] bg-sup-withe shadow-md"
+        class="w-full max-w-[480px] max-h-[90vh] overflow-auto rounded-[14px] bg-sup-withe shadow-md"
       >
         <div
           class="flex items-center justify-between border-b border-sup-border px-5 py-[18px]"
@@ -73,20 +106,103 @@ const onConfirm = async () => {
           </div>
 
           <div
-            v-if="recipeCount || planningCount"
-            class="mb-4 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-[14px] py-[10px] text-[12.5px] font-medium text-[#8A6D00]"
+            v-if="recipes.length || plannings.length"
+            class="mb-4 flex flex-col gap-2 rounded-md border border-sup-border bg-sup-light-gray p-3"
           >
-            {{ recipeCount || 0 }} recette{{
-              (recipeCount || 0) > 1 ? "s" : ""
-            }}
-            et {{ planningCount || 0 }} planning{{
-              (planningCount || 0) > 1 ? "s" : ""
-            }}
-            redeviendront personnel{{
-              (recipeCount || 0) + (planningCount || 0) > 1 ? "s" : ""
-            }}
-            : ils ne seront pas supprimés.
+            <p class="text-[12.5px] font-semibold text-sup-very-gray">
+              Que faire du contenu du cookbook ?
+            </p>
+
+            <label
+              class="flex items-start gap-2 text-[12.5px] text-sup-very-gray"
+            >
+              <input
+                v-model="keepRecipes"
+                type="checkbox"
+                class="mt-0.5 h-4 w-4 accent-sup-dark-green"
+              />
+              <span>
+                Garder mes recettes en personnel
+                <span class="text-gray-400">({{ recipes.length }})</span>
+              </span>
+            </label>
+
+            <label
+              class="flex items-start gap-2 text-[12.5px] text-sup-very-gray"
+            >
+              <input
+                v-model="keepPlannings"
+                type="checkbox"
+                :disabled="!keepRecipes"
+                class="mt-0.5 h-4 w-4 accent-sup-dark-green disabled:opacity-50"
+              />
+              <span :class="!keepRecipes ? 'text-gray-400' : ''">
+                Garder aussi mes plannings, avec leurs repas
+                <span class="text-gray-400">({{ plannings.length }})</span>
+              </span>
+            </label>
+            <p v-if="!keepRecipes" class="pl-6 text-[11px] text-gray-400">
+              Un planning ne peut pas être gardé sans les recettes de ses repas.
+            </p>
           </div>
+
+          <div
+            v-if="recipesToDelete.length"
+            class="mb-3 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-[14px] py-[10px] text-[12.5px] font-medium text-[#8A6D00]"
+          >
+            <p>
+              {{ recipesToDelete.length }} recette{{
+                recipesToDelete.length > 1 ? "s" : ""
+              }}
+              définitivement supprimée{{
+                recipesToDelete.length > 1 ? "s" : ""
+              }}
+              :
+            </p>
+            <ul class="mt-1.5 flex flex-wrap gap-1.5">
+              <li
+                v-for="recipe in recipesToDelete"
+                :key="recipe.id"
+                class="rounded-full bg-sup-withe px-2.5 py-0.5 text-[11px] font-semibold"
+              >
+                {{ recipe.title }}
+              </li>
+            </ul>
+          </div>
+
+          <div
+            v-if="planningsToDelete.length"
+            class="mb-3 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-[14px] py-[10px] text-[12.5px] font-medium text-[#8A6D00]"
+          >
+            <p>
+              {{ planningsToDelete.length }} planning{{
+                planningsToDelete.length > 1 ? "s" : ""
+              }}
+              définitivement supprimé{{
+                planningsToDelete.length > 1 ? "s" : ""
+              }}
+              :
+            </p>
+            <ul class="mt-1.5 flex flex-wrap gap-1.5">
+              <li
+                v-for="planning in planningsToDelete"
+                :key="planning.id"
+                class="rounded-full bg-sup-withe px-2.5 py-0.5 text-[11px] font-semibold"
+              >
+                {{ planning.name }}
+              </li>
+            </ul>
+          </div>
+
+          <p
+            v-if="
+              (keepRecipes && recipes.length) ||
+              (keepPlannings && plannings.length)
+            "
+            class="mb-3 text-[12px] text-gray-500"
+          >
+            Le reste redeviendra personnel (retiré du cookbook, pas supprimé).
+          </p>
 
           <div class="my-[14px]">
             <p class="mb-2 text-[12px] text-gray-500">

@@ -167,7 +167,7 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
 
         <div
           v-if="plannings.length"
-          class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
+          class="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4"
         >
           <PlanningCard
             v-for="planning in plannings"
@@ -189,8 +189,8 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
       v-if="cookbook"
       :open="deleteModalOpen"
       :cookbook-name="cookbook.name"
-      :recipe-count="recipes.length"
-      :planning-count="plannings.length"
+      :recipes="recipes"
+      :plannings="plannings"
       @close="deleteModalOpen = false"
       @confirm="confirmDelete"
     />

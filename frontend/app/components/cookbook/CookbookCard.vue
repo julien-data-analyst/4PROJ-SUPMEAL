@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { Cookbook } from "~/stores/cookbooks/useCookbookStore";
-import { useCookbookStore } from "~/stores/cookbooks/useCookbookStore";
 import { relativeTime } from "~/composables/useRecipes";
+import {
+  deleteCookbookWithOptions,
+  type DeleteCookbookOptions,
+} from "~/composables/useCookbooksEditView";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
 import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";
@@ -10,8 +13,6 @@ import IconTrash from "~/components/icons/IconTrash.vue";
 import DeleteCookbookModal from "~/components/cookbook/DeleteCookbookModal.vue";
 
 const props = defineProps<{ cookbook: Cookbook; to: string }>();
-
-const store = useCookbookStore();
 
 // Mirrors RecipeCard's .ph-a..ph-g placeholder gradients, used whenever the
 // cookbook has no uploaded icon.
@@ -46,8 +47,13 @@ const openDeleteModal = () => {
   deleteModalOpen.value = true;
 };
 
-const confirmDelete = async () => {
-  await store.deleteCookbook(props.cookbook.id);
+const confirmDelete = async (options: DeleteCookbookOptions) => {
+  await deleteCookbookWithOptions(
+    props.cookbook.id,
+    props.cookbook.recipes,
+    props.cookbook.plannings,
+    options,
+  );
   deleteModalOpen.value = false;
 };
 
@@ -136,8 +142,8 @@ const menuItemClasses =
     <DeleteCookbookModal
       :open="deleteModalOpen"
       :cookbook-name="cookbook.name"
-      :recipe-count="cookbook.recipes.length"
-      :planning-count="cookbook.plannings.length"
+      :recipes="cookbook.recipes"
+      :plannings="cookbook.plannings"
       @close="deleteModalOpen = false"
       @confirm="confirmDelete"
     />
