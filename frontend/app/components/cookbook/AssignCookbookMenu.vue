@@ -4,7 +4,9 @@ import IconCookbook from "~/components/icons/IconCookbook.vue";
 import IconSearch from "~/components/icons/IconSearch.vue";
 
 const props = defineProps<{ currentCookbookId?: number | null }>();
-const emit = defineEmits<{ select: [cookbook: { id: number; name: string }] }>();
+const emit = defineEmits<{
+  select: [cookbook: { id: number; name: string }];
+}>();
 
 const store = useCookbookStore();
 const query = ref("");

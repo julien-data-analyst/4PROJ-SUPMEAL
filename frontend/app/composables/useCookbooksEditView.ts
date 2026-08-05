@@ -7,6 +7,42 @@ import { useToastStore } from "~/stores/useToastStore";
 import { useAuth } from "~/composables/useAuth";
 import { fileToDataUrl, isAllowedImageFile } from "~/composables/useRecipes";
 
+export interface DeleteCookbookOptions {
+  keepRecipes: boolean;
+  keepPlannings: boolean;
+}
+
+// Deleting a cookbook is a plain `DELETE /cookbooks/{id}/`, which already
+// reverts any *remaining* recipes/plannings to personal (see the backend's
+// `CookbookViewSet.perform_destroy`). "Don't keep" is handled here, up
+// front, by deleting those recipes/plannings first via their own existing
+// endpoints (each already knows how to clean up its own references, e.g. a
+// recipe used in a planning) - no dedicated backend route needed. Plannings
+// are removed before recipes so a still-live planning never briefly points
+// at an already-deleted recipe.
+export async function deleteCookbookWithOptions(
+  cookbookId: number,
+  recipes: { id: number }[],
+  plannings: { id: number }[],
+  options: DeleteCookbookOptions,
+): Promise<void> {
+  const cookbookStore = useCookbookStore();
+  const recipeStore = useRecipeStore();
+  const planningStore = usePlanningStore();
+
+  if (!options.keepPlannings) {
+    for (const planning of plannings) {
+      await planningStore.deletePlanning(planning.id);
+    }
+  }
+  if (!options.keepRecipes) {
+    for (const recipe of recipes) {
+      await recipeStore.deleteRecipe(recipe.id);
+    }
+  }
+  await cookbookStore.deleteCookbook(cookbookId);
+}
+
 export function useCookbookEditForm(props: {
   mode: "create" | "edit";
   cookbookId?: number;
@@ -93,11 +129,16 @@ export function useCookbookEditForm(props: {
     }
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (options: DeleteCookbookOptions) => {
     if (!props.cookbookId || isDeleting.value) return;
     isDeleting.value = true;
     try {
-      await store.deleteCookbook(props.cookbookId);
+      await deleteCookbookWithOptions(
+        props.cookbookId,
+        currentCookbook.value?.recipes ?? [],
+        currentCookbook.value?.plannings ?? [],
+        options,
+      );
       deleteModalOpen.value = false;
       toast.success("Cookbook supprimé.");
       await navigateTo("/cookbooks");
@@ -158,9 +199,17 @@ export function useCookbookView(cookbookId: number) {
     () => !!cookbook.value && cookbook.value.creator.id === user.value?.id,
   );
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (options: DeleteCookbookOptions) => {
     try {
-      await store.deleteCookbook(cookbookId);
+      // Uses the live store lists (not `cookbook.value.recipes/plannings`,
+      // a snapshot from the initial load) so a recipe/planning removed or
+      // reassigned since then via its own card isn't deleted a second time.
+      await deleteCookbookWithOptions(
+        cookbookId,
+        recipeStore.recipes,
+        planningStore.plannings,
+        options,
+      );
       deleteModalOpen.value = false;
       toast.success("Cookbook supprimé.");
       await navigateTo("/cookbooks");

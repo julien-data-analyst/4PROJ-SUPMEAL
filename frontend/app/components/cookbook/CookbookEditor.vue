@@ -125,8 +125,8 @@ const {
       v-if="mode === 'edit'"
       :open="deleteModalOpen"
       :cookbook-name="name"
-      :recipe-count="currentCookbook?.recipes.length"
-      :planning-count="currentCookbook?.plannings.length"
+      :recipes="currentCookbook?.recipes ?? []"
+      :plannings="currentCookbook?.plannings ?? []"
       @close="deleteModalOpen = false"
       @confirm="confirmDelete"
     />
