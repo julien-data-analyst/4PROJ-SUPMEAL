@@ -8,25 +8,34 @@ import PlanningMealsGrid from "~/components/planning/PlanningMealsGrid.vue";
 import DeletePlanningModal from "~/components/planning/DeletePlanningModal.vue";
 import { usePlanningView } from "~/composables/usePlanningEditView";
 import { PLANNING_TYPE_LABELS } from "~/composables/usePlanning";
+import { useGoBack } from "~/composables/useGoBack";
 
 definePageMeta({ layout: "app" });
 
 const planningId = Number(useRoute().params.id);
+const goBack = useGoBack("/planning");
 
-const { isLoading, deleteModalOpen, planning, isOwner, confirmDelete } =
-  usePlanningView(planningId);
+const {
+  isLoading,
+  deleteModalOpen,
+  planning,
+  isOwner,
+  cookbookName,
+  confirmDelete,
+} = usePlanningView(planningId);
 </script>
 
 <template>
   <div class="mx-auto max-w-[980px]">
     <div class="mb-[22px] flex flex-wrap items-center justify-between gap-4">
-      <NuxtLink
-        to="/planning"
+      <button
+        type="button"
         class="flex items-center gap-[6px] text-[13px] font-medium text-gray-400 hover:text-sup-dark-green"
+        @click="goBack"
       >
         <IconChevronLeft size="xs" />
         Retour
-      </NuxtLink>
+      </button>
 
       <div v-if="planning" class="flex flex-wrap items-center gap-[10px]">
         <button
@@ -77,6 +86,19 @@ const { isLoading, deleteModalOpen, planning, isOwner, confirmDelete } =
               class="inline-flex items-center rounded-full border border-sup-border bg-sup-withe px-[10px] py-[3px] text-[11px] font-semibold text-gray-400"
             >
               {{ PLANNING_TYPE_LABELS[planning.type] }}
+            </span>
+            <NuxtLink
+              v-if="planning.cookbook"
+              :to="`/cookbooks/${planning.cookbook}/view`"
+              class="inline-flex items-center rounded-full border border-sup-border bg-sup-withe px-[10px] py-[3px] text-[11px] font-semibold text-gray-400 hover:text-sup-dark-green hover:underline"
+            >
+              Dans le cookbook « {{ cookbookName || "…" }} »
+            </NuxtLink>
+            <span
+              v-else
+              class="inline-flex items-center rounded-full border border-sup-border bg-sup-withe px-[10px] py-[3px] text-[11px] font-semibold text-gray-400"
+            >
+              Personnel
             </span>
             <span
               >par

@@ -136,6 +136,14 @@ export function formatCookingDuration(minutes: string | number | null): string {
   return mm ? `${hh}h${String(mm).padStart(2, "0")}` : `${hh}h`;
 }
 
+// Displays a number as a plain integer when it has no decimal part, or with
+// a French comma separator otherwise (e.g. 4 -> "4", 2.5 -> "2,5").
+export function formatNumber(value: string | number): string {
+  const num = typeof value === "number" ? value : parseFloat(value);
+  if (Number.isNaN(num)) return String(value);
+  return Number.isInteger(num) ? String(num) : String(num).replace(".", ",");
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")

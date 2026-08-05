@@ -13,6 +13,9 @@ import {
   mealsByDayAndSlot,
 } from "~/composables/usePlanning";
 import type { MealSlot } from "~/composables/usePlanning";
+import { useCookbookStore } from "~/stores/cookbooks/useCookbookStore";
+import { useCookbookName } from "~/composables/useCookbooks";
+import type { Recipe } from "~/stores/useRecipeStore";
 
 export interface RecipePick {
   id: number | null;
@@ -25,7 +28,9 @@ export function usePlanningEditForm(props: {
   planningId?: number;
 }) {
   const store = usePlanningStore();
+  const cookbookStore = useCookbookStore();
   const toast = useToastStore();
+  const route = useRoute();
 
   const name = ref("");
   const icon = ref<string | null>(null);
@@ -43,6 +48,37 @@ export function usePlanningEditForm(props: {
 
   const scheduledCount = computed(
     () => slots.value.filter((s) => s.recipeId !== null).length,
+  );
+
+  // A planning is filed into a cookbook either because it already belongs
+  // to one (edit mode, from the loaded planning) or because it's being
+  // created from within a cookbook's page (`/planning/new?cookbook=<id>`).
+  const cookbookIdParam = computed(() => {
+    if (props.mode !== "create") return null;
+    const raw = route.query.cookbook;
+    const id = Number(Array.isArray(raw) ? raw[0] : raw);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  });
+  const cookbookId = computed(
+    () => currentPlanning.value?.cookbook ?? cookbookIdParam.value,
+  );
+  const cookbookName = useCookbookName(() => cookbookId.value);
+
+  // A cookbook-scoped planning can only schedule recipes that belong to the
+  // same cookbook, so the recipe picker's suggestions are restricted to this
+  // list instead of searching the user's personal recipes.
+  const cookbookRecipes = ref<Recipe[]>([]);
+  watch(
+    cookbookId,
+    async (id) => {
+      if (!id) {
+        cookbookRecipes.value = [];
+        return;
+      }
+      const cookbook = await cookbookStore.fetchCookbook(id);
+      cookbookRecipes.value = cookbook.recipes;
+    },
+    { immediate: true },
   );
 
   const loadPlanning = async () => {
@@ -105,6 +141,7 @@ export function usePlanningEditForm(props: {
     name: name.value.trim(),
     icon: icon.value || null,
     type: type.value,
+    ...(cookbookIdParam.value ? { cookbook: cookbookIdParam.value } : {}),
     meals: slots.value
       .filter((s) => s.recipeId !== null)
       .map((s) => ({
@@ -175,6 +212,9 @@ export function usePlanningEditForm(props: {
     deleteModalOpen,
     isDeleting,
     currentPlanning,
+    cookbookId,
+    cookbookName,
+    cookbookRecipes,
     scheduledCount,
     onTypeChange,
     onIconChange,
@@ -208,6 +248,7 @@ export function usePlanningView(planningId: number) {
   const mealsMap = computed(() =>
     planning.value ? mealsByDayAndSlot(planning.value.meals) : new Map(),
   );
+  const cookbookName = useCookbookName(() => planning.value?.cookbook ?? null);
 
   const confirmDelete = async () => {
     try {
@@ -227,6 +268,7 @@ export function usePlanningView(planningId: number) {
     planning,
     isOwner,
     mealsMap,
+    cookbookName,
     confirmDelete,
   };
 }
