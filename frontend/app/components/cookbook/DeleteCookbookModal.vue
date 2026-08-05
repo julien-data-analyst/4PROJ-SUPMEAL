@@ -76,7 +76,9 @@ const onConfirm = async () => {
             v-if="recipeCount || planningCount"
             class="mb-4 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-[14px] py-[10px] text-[12.5px] font-medium text-[#8A6D00]"
           >
-            {{ recipeCount || 0 }} recette{{ (recipeCount || 0) > 1 ? "s" : "" }}
+            {{ recipeCount || 0 }} recette{{
+              (recipeCount || 0) > 1 ? "s" : ""
+            }}
             et {{ planningCount || 0 }} planning{{
               (planningCount || 0) > 1 ? "s" : ""
             }}

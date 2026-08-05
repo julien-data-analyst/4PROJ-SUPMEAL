@@ -51,7 +51,10 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
         Retour
       </button>
 
-      <div v-if="cookbook && isOwner" class="flex flex-wrap items-center gap-[10px]">
+      <div
+        v-if="cookbook && isOwner"
+        class="flex flex-wrap items-center gap-[10px]"
+      >
         <button
           type="button"
           class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-red-200 text-sup-red-error transition hover:bg-sup-red-error/10"
@@ -88,7 +91,9 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
           <h1 class="mb-[6px] text-[24px] font-semibold text-sup-very-gray">
             {{ cookbook.name }}
           </h1>
-          <div class="flex flex-wrap items-center gap-2 text-[12.5px] text-gray-400">
+          <div
+            class="flex flex-wrap items-center gap-2 text-[12.5px] text-gray-400"
+          >
             <span>
               {{
                 isOwner
@@ -151,7 +156,10 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
 
       <section v-else>
         <div class="mb-[14px] flex items-center justify-end">
-          <AppButton variant="primary" :to="`/planning/new?cookbook=${cookbookId}`">
+          <AppButton
+            variant="primary"
+            :to="`/planning/new?cookbook=${cookbookId}`"
+          >
             <template #icon><IconPlus size="xs" /></template>
             Nouveau planning
           </AppButton>

@@ -24,7 +24,9 @@ let searchHandle: ReturnType<typeof setTimeout> | undefined;
 const filterLocal = (query: string): Recipe[] => {
   const list = props.recipes ?? [];
   const q = query.trim().toLowerCase();
-  const matches = q ? list.filter((r) => r.title.toLowerCase().includes(q)) : list;
+  const matches = q
+    ? list.filter((r) => r.title.toLowerCase().includes(q))
+    : list;
   return matches.slice(0, 8);
 };
 
@@ -49,7 +51,8 @@ const onInput = () => {
 const onFocus = async () => {
   showSuggestions.value = true;
   if (props.recipes) {
-    if (!suggestions.value.length) suggestions.value = filterLocal(pick.value.title);
+    if (!suggestions.value.length)
+      suggestions.value = filterLocal(pick.value.title);
     return;
   }
   if (!pick.value.title.trim() && !suggestions.value.length) {
@@ -138,7 +141,11 @@ const clear = () => {
       v-else-if="showSuggestions && pick.title.trim()"
       class="absolute left-0 top-full z-20 mt-1 w-full min-w-[220px] rounded-md border border-sup-border bg-sup-withe px-3 py-2 text-[12px] text-gray-400 shadow-lg"
     >
-      {{ recipes ? "Aucune recette dans ce cookbook." : "Aucune recette personnelle trouvée." }}
+      {{
+        recipes
+          ? "Aucune recette dans ce cookbook."
+          : "Aucune recette personnelle trouvée."
+      }}
     </p>
   </div>
 </template>

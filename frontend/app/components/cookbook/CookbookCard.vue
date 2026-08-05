@@ -82,7 +82,9 @@ const menuItemClasses =
       <p class="mb-[3px] truncate text-[13px] font-semibold text-sup-very-gray">
         {{ cookbook.name }}
       </p>
-      <div class="flex items-center justify-between gap-1.5 text-[11px] text-gray-400">
+      <div
+        class="flex items-center justify-between gap-1.5 text-[11px] text-gray-400"
+      >
         <span>{{ contentLabel }}</span>
         <span>{{ relativeTime(cookbook.updated_at) }}</span>
       </div>
