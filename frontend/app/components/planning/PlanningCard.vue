@@ -61,7 +61,7 @@ const menuItemClasses =
 
 <template>
   <div
-    class="relative flex items-center gap-3 rounded-[10px] border border-sup-border bg-sup-withe p-4 pr-9 transition hover:-translate-y-px hover:shadow-md"
+    class="relative flex items-center gap-3 rounded-[10px] border border-sup-border bg-sup-withe p-5 pr-10 transition hover:-translate-y-px hover:shadow-md"
   >
     <NuxtLink
       :to="to"
@@ -70,22 +70,22 @@ const menuItemClasses =
     />
 
     <div
-      class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-sup-light-gray"
+      class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-sup-light-gray"
     >
       <img
         v-if="planning.icon"
         :src="planning.icon"
         :alt="planning.name"
-        class="h-7 w-7 object-contain"
+        class="h-8 w-8 object-contain"
       />
       <IconCalendar v-else size="sm" />
     </div>
 
     <div class="min-w-0 flex-1">
-      <p class="truncate text-[13.5px] font-semibold text-sup-very-gray">
+      <p class="truncate text-[14.5px] font-semibold text-sup-very-gray">
         {{ planning.name }}
       </p>
-      <p class="truncate text-[11px] text-gray-400">
+      <p class="truncate text-[11.5px] text-gray-400">
         {{ PLANNING_TYPE_LABELS[planning.type] }} · {{ mealCountLabel }} ·
         {{ relativeTime(planning.updated_at) }}
       </p>
