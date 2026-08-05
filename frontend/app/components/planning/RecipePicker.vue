@@ -5,9 +5,10 @@ import type { RecipePick } from "~/composables/usePlanningEditView";
 import IconClose from "~/components/icons/IconClose.vue";
 import IconRecipe from "~/components/icons/IconRecipe.vue";
 
-withDefaults(defineProps<{ expanded?: boolean }>(), {
-  expanded: false,
-});
+const props = withDefaults(
+  defineProps<{ expanded?: boolean; recipes?: Recipe[] }>(),
+  { expanded: false, recipes: undefined },
+);
 
 const pick = defineModel<RecipePick>({ required: true });
 
@@ -17,11 +18,25 @@ const suggestions = ref<Recipe[]>([]);
 const showSuggestions = ref(false);
 let searchHandle: ReturnType<typeof setTimeout> | undefined;
 
+// When `recipes` is provided (a cookbook-scoped planning), suggestions are
+// filtered client-side from that fixed list instead of searching the
+// caller's personal recipes on the server.
+const filterLocal = (query: string): Recipe[] => {
+  const list = props.recipes ?? [];
+  const q = query.trim().toLowerCase();
+  const matches = q ? list.filter((r) => r.title.toLowerCase().includes(q)) : list;
+  return matches.slice(0, 8);
+};
+
 const onInput = () => {
   pick.value = { ...pick.value, id: null, image: null };
   showSuggestions.value = true;
-  if (searchHandle) clearTimeout(searchHandle);
   const query = pick.value.title.trim();
+  if (props.recipes) {
+    suggestions.value = filterLocal(query);
+    return;
+  }
+  if (searchHandle) clearTimeout(searchHandle);
   if (!query) {
     suggestions.value = [];
     return;
@@ -33,6 +48,10 @@ const onInput = () => {
 
 const onFocus = async () => {
   showSuggestions.value = true;
+  if (props.recipes) {
+    if (!suggestions.value.length) suggestions.value = filterLocal(pick.value.title);
+    return;
+  }
   if (!pick.value.title.trim() && !suggestions.value.length) {
     suggestions.value = await searchMyRecipes("");
   }
@@ -119,7 +138,7 @@ const clear = () => {
       v-else-if="showSuggestions && pick.title.trim()"
       class="absolute left-0 top-full z-20 mt-1 w-full min-w-[220px] rounded-md border border-sup-border bg-sup-withe px-3 py-2 text-[12px] text-gray-400 shadow-lg"
     >
-      Aucune recette personnelle trouvée.
+      {{ recipes ? "Aucune recette dans ce cookbook." : "Aucune recette personnelle trouvée." }}
     </p>
   </div>
 </template>

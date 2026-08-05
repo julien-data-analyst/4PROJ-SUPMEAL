@@ -8,9 +8,14 @@ import {
   DAILY_PLANNING_DAY,
 } from "~/composables/usePlanning";
 import type { RecipePick } from "~/composables/usePlanningEditView";
+import type { Recipe } from "~/stores/useRecipeStore";
 import RecipePicker from "~/components/planning/RecipePicker.vue";
 
-const props = defineProps<{ type: PlanningType; slots: MealSlot[] }>();
+const props = defineProps<{
+  type: PlanningType;
+  slots: MealSlot[];
+  recipes?: Recipe[];
+}>();
 const emit = defineEmits<{ "update-slot": [key: string, pick: RecipePick] }>();
 
 const days = computed(() =>
@@ -91,6 +96,7 @@ const expanded = ref(true);
                     pickFor(slotFor(day.value, moment.value, course.value))
                   "
                   :expanded="expanded"
+                  :recipes="recipes"
                   @update:model-value="
                     (v) =>
                       onUpdate(

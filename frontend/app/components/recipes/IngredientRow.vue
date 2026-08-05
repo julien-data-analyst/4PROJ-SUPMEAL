@@ -159,10 +159,7 @@ const numberLabelClasses =
       <span class="flex-1">Nouvel ingrédient : une image est obligatoire.</span>
     </div>
 
-    <div
-      v-if="isNewIngredient || line.image"
-      class="mt-2 flex items-center gap-2"
-    >
+    <div class="mt-2 flex items-center gap-2">
       <img
         v-if="line.image"
         :src="line.image"

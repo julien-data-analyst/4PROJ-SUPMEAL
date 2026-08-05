@@ -2,20 +2,24 @@
 import AppButton from "~/components/buttons/AppButton.vue";
 import RecipeCard from "~/components/recipes/RecipeCard.vue";
 import PlanningCard from "~/components/planning/PlanningCard.vue";
+import CookbookCard from "~/components/cookbook/CookbookCard.vue";
 import IconPlus from "~/components/icons/IconPlus.vue";
 import IconUpload from "~/components/icons/IconUpload.vue";
 import IconDownload from "~/components/icons/IconDownload.vue";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
 import { useRecipes, sortFavoritesFirst } from "~/composables/useRecipes";
 import { usePlanning } from "~/composables/usePlanning";
+import { useCookbooks } from "~/composables/useCookbooks";
 
 definePageMeta({ layout: "app" });
 
 const { store, fetchRecentRecipes } = useRecipes();
 const { store: planningStore, fetchRecentPlannings } = usePlanning();
+const { store: cookbookStore, fetchRecentCookbooks } = useCookbooks();
 
 const isLoading = ref(true);
 const isPlanningLoading = ref(true);
+const isCookbookLoading = ref(true);
 
 onMounted(async () => {
   try {
@@ -30,6 +34,14 @@ onMounted(async () => {
     await fetchRecentPlannings(3);
   } finally {
     isPlanningLoading.value = false;
+  }
+});
+
+onMounted(async () => {
+  try {
+    await fetchRecentCookbooks(3);
+  } finally {
+    isCookbookLoading.value = false;
   }
 });
 
@@ -123,12 +135,44 @@ const recentPlannings = computed(() =>
         <h2 class="text-[18px] font-semibold text-sup-very-gray">
           Mes cookbooks
         </h2>
+        <NuxtLink
+          to="/cookbooks"
+          class="text-[13px] font-semibold text-sup-dark-green hover:underline"
+        >
+          Voir tout
+        </NuxtLink>
       </div>
+
       <div
+        v-if="isCookbookLoading"
+        class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4"
+      >
+        <div
+          v-for="n in 3"
+          :key="n"
+          class="h-[140px] animate-pulse rounded-[10px] bg-sup-border/50"
+        />
+      </div>
+
+      <div
+        v-else-if="cookbookStore.cookbooks.length"
+        class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4"
+      >
+        <CookbookCard
+          v-for="cookbook in cookbookStore.cookbooks"
+          :key="cookbook.id"
+          :cookbook="cookbook"
+          :to="`/cookbooks/${cookbook.id}/view`"
+        />
+      </div>
+
+      <div
+        v-else
         class="flex items-center gap-3 rounded-[10px] border border-dashed border-sup-border bg-sup-withe p-6 text-[13px] text-gray-400"
       >
         <IconCookbook size="sm" />
-        Bientôt disponible.
+        Vous n'avez pas encore de cookbook. Créez-en un pour regrouper vos
+        recettes et plannings !
       </div>
     </section>
 
