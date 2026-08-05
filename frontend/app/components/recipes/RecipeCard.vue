@@ -2,17 +2,21 @@
 import type { Recipe } from "~/stores/useRecipeStore";
 import { relativeTime, useRecipes } from "~/composables/useRecipes";
 import { useRecipeStore } from "~/stores/useRecipeStore";
+import { useToastStore } from "~/stores/useToastStore";
 import IconBookmark from "~/components/icons/IconBookmark.vue";
 import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";
 import IconEdit from "~/components/icons/IconEdit.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
+import IconCookbook from "~/components/icons/IconCookbook.vue";
 import IconChevron from "~/components/icons/IconChevron.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
+import AssignCookbookMenu from "~/components/cookbook/AssignCookbookMenu.vue";
 
 const props = defineProps<{ recipe: Recipe; to: string }>();
 
 const store = useRecipeStore();
+const toast = useToastStore();
 const { toggleFavorite } = useRecipes();
 
 // Mirrors the prototype's .ph-a..ph-g placeholder gradients (no stock photos
@@ -33,11 +37,15 @@ const placeholderClass = computed(
 
 const isFavoriteBusy = ref(false);
 const menuOpen = ref(false);
+const cookbookMenuOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 const deleteModalOpen = ref(false);
 const tagsExpanded = ref(false);
 
-onClickOutside(menuRef, () => (menuOpen.value = false));
+onClickOutside(menuRef, () => {
+  menuOpen.value = false;
+  cookbookMenuOpen.value = false;
+});
 
 const onToggleFavorite = async () => {
   if (isFavoriteBusy.value) return;
@@ -59,13 +67,27 @@ const confirmDelete = async () => {
   deleteModalOpen.value = false;
 };
 
+const openCookbookMenu = () => {
+  menuOpen.value = false;
+  cookbookMenuOpen.value = true;
+};
+
+const onSelectCookbook = async (cookbook: { id: number; name: string }) => {
+  await store.updateRecipe(props.recipe.id, { cookbook: cookbook.id });
+  // The card's list (personal recipes, a cookbook's own recipes...) no
+  // longer includes this recipe once it's filed elsewhere.
+  store.recipes = store.recipes.filter((r) => r.id !== props.recipe.id);
+  cookbookMenuOpen.value = false;
+  toast.success(`Recette ajoutée au cookbook « ${cookbook.name} ».`);
+};
+
 const menuItemClasses =
   "flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-sup-very-gray hover:bg-sup-light-gray";
 </script>
 
 <template>
   <div
-    class="relative flex flex-col overflow-hidden rounded-[10px] border border-sup-border bg-sup-withe transition hover:-translate-y-px hover:shadow-md"
+    class="relative flex flex-col rounded-[10px] border border-sup-border bg-sup-withe transition hover:-translate-y-px hover:shadow-md"
   >
     <NuxtLink
       :to="to"
@@ -74,7 +96,7 @@ const menuItemClasses =
     />
 
     <div
-      class="flex h-[110px] w-full items-center justify-center overflow-hidden"
+      class="flex h-[150px] w-full items-center justify-center overflow-hidden rounded-t-[10px]"
       :class="recipe.image ? 'bg-sup-light-gray' : placeholderClass"
     >
       <img
@@ -83,15 +105,15 @@ const menuItemClasses =
         :alt="recipe.title"
         class="h-full w-full object-cover"
       />
-      <span v-else class="text-[26px]">🍽️</span>
+      <span v-else class="text-[34px]">🍽️</span>
     </div>
 
-    <div class="px-3 pb-3 pt-[10px]">
-      <p class="mb-[3px] truncate text-[13px] font-semibold text-sup-very-gray">
+    <div class="px-4 pb-4 pt-3">
+      <p class="mb-1 truncate text-[14.5px] font-semibold text-sup-very-gray">
         {{ recipe.title }}
       </p>
       <div
-        class="flex items-center justify-between gap-1.5 text-[11px] text-gray-400"
+        class="flex items-center justify-between gap-1.5 text-[11.5px] text-gray-400"
       >
         <span class="flex items-center gap-1">
           {{ relativeTime(recipe.updated_at) }}
@@ -170,12 +192,30 @@ const menuItemClasses =
         </NuxtLink>
         <button
           type="button"
+          :class="menuItemClasses"
+          @click.prevent="openCookbookMenu"
+        >
+          <IconCookbook size="xs" />
+          Cookbook
+        </button>
+        <button
+          type="button"
           :class="[menuItemClasses, 'text-sup-red-error']"
           @click.prevent="openDeleteModal"
         >
           <IconTrash size="xs" />
           Supprimer
         </button>
+      </div>
+
+      <div
+        v-if="cookbookMenuOpen"
+        class="absolute right-0 top-full mt-1 overflow-hidden rounded-md border border-sup-border bg-sup-withe shadow-lg"
+      >
+        <AssignCookbookMenu
+          :current-cookbook-id="recipe.cookbook"
+          @select="onSelectCookbook"
+        />
       </div>
     </div>
 

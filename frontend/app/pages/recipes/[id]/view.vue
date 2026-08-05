@@ -6,10 +6,13 @@ import IconTrash from "~/components/icons/IconTrash.vue";
 import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
 import { useRecipeView } from "~/composables/useRecipesEditView";
+import { formatNumber } from "~/composables/useRecipes";
+import { useGoBack } from "~/composables/useGoBack";
 
 definePageMeta({ layout: "app" });
 
 const recipeId = Number(useRoute().params.id);
+const goBack = useGoBack("/recipes");
 
 const {
   isLoading,
@@ -17,6 +20,7 @@ const {
   recipe,
   isOwner,
   totalPrepMinutes,
+  cookbookName,
   onToggleFavorite,
   confirmDelete,
   formatCookingDuration,
@@ -27,13 +31,14 @@ const {
 <template>
   <div class="mx-auto max-w-[900px]">
     <div class="mb-[22px] flex flex-wrap items-center justify-between gap-4">
-      <NuxtLink
-        to="/recipes"
+      <button
+        type="button"
         class="flex items-center gap-[6px] text-[13px] font-medium text-gray-400 hover:text-sup-dark-green"
+        @click="goBack"
       >
         <IconChevronLeft size="xs" />
         Retour
-      </NuxtLink>
+      </button>
 
       <div v-if="recipe" class="flex flex-wrap items-center gap-[10px]">
         <AppButton
@@ -103,10 +108,18 @@ const {
         <div
           class="flex flex-wrap items-center gap-2 text-[12.5px] text-gray-400"
         >
+          <NuxtLink
+            v-if="recipe.cookbook"
+            :to="`/cookbooks/${recipe.cookbook}/view`"
+            class="inline-flex items-center rounded-full border border-sup-border bg-sup-withe px-[10px] py-[3px] text-[11px] font-semibold text-gray-400 hover:text-sup-dark-green hover:underline"
+          >
+            Dans le cookbook « {{ cookbookName || "…" }} »
+          </NuxtLink>
           <span
+            v-else
             class="inline-flex items-center rounded-full border border-sup-border bg-sup-withe px-[10px] py-[3px] text-[11px] font-semibold text-gray-400"
           >
-            {{ recipe.cookbook ? "Dans un cookbook" : "Personnel" }}
+            Personnel
           </span>
           <span
             >par
@@ -159,10 +172,11 @@ const {
                   class="h-6 w-6 rounded object-cover"
                 />
                 <span>
-                  {{ line.quantity }}{{ line.unity ? ` ${line.unity}` : "" }}
+                  {{ formatNumber(line.quantity)
+                  }}{{ line.unity ? ` ${line.unity}` : "" }}
                   {{ line.ingredient.name }}
                   <span class="text-[11px] text-gray-400"
-                    >({{ line.person_numbers }} pers.)</span
+                    >({{ formatNumber(line.person_numbers) }} pers.)</span
                   >
                 </span>
               </li>

@@ -66,18 +66,18 @@ const sortedRecipes = computed(() => sortFavoritesFirst(store.recipes));
 
     <div
       v-if="isLoading"
-      class="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-4"
+      class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
     >
       <div
         v-for="n in 8"
         :key="n"
-        class="h-[150px] animate-pulse rounded-[10px] bg-sup-border/50"
+        class="h-[205px] animate-pulse rounded-[10px] bg-sup-border/50"
       />
     </div>
 
     <div
       v-else-if="sortedRecipes.length"
-      class="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-4"
+      class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
     >
       <RecipeCard
         v-for="recipe in sortedRecipes"

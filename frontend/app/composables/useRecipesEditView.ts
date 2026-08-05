@@ -3,6 +3,7 @@ import { useRecipeStore } from "~/stores/useRecipeStore";
 import type { RecipeWritePayload } from "~/stores/useRecipeStore";
 import { useToastStore } from "~/stores/useToastStore";
 import { useAuth } from "~/composables/useAuth";
+import { useCookbookName } from "~/composables/useCookbooks";
 import {
   emptyStepLine,
   fileToDataUrl,
@@ -29,6 +30,7 @@ export function useRecipeEditForm(props: {
 }) {
   const store = useRecipeStore();
   const toast = useToastStore();
+  const route = useRoute();
 
   const title = ref("");
   const source = ref("");
@@ -49,15 +51,28 @@ export function useRecipeEditForm(props: {
 
   const currentRecipe = computed(() => store.currentRecipe);
 
-  // Live counter - sum of every step's duration plus the cooking duration,
-  // updated as the user edits either.
-  const totalMinutes = computed(() => {
-    const stepsTotal = stepLines.value.reduce(
+  // A recipe is filed into a cookbook either because it already belongs to
+  // one (edit mode, from the loaded recipe) or because it's being created
+  // from within a cookbook's page (`/new?cookbook=<id>`).
+  const cookbookIdParam = computed(() => {
+    if (props.mode !== "create") return null;
+    const raw = route.query.cookbook;
+    const id = Number(Array.isArray(raw) ? raw[0] : raw);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  });
+  const cookbookId = computed(
+    () => currentRecipe.value?.cookbook ?? cookbookIdParam.value,
+  );
+  const cookbookName = useCookbookName(() => cookbookId.value);
+
+  // Live counter - sum of every step's own duration only (cooking_duration
+  // is a separate, user-entered field and isn't part of this estimate).
+  const totalMinutes = computed(() =>
+    stepLines.value.reduce(
       (sum, s) => sum + (Number(s.durationMinutes) || 0),
       0,
-    );
-    return stepsTotal + (Number(cookingDuration.value) || 0);
-  });
+    ),
+  );
 
   const loadRecipe = async () => {
     if (props.mode !== "edit" || !props.recipeId) return;
@@ -153,6 +168,7 @@ export function useRecipeEditForm(props: {
     cooking_duration: cookingDuration.value
       ? Number(cookingDuration.value)
       : null,
+    ...(cookbookIdParam.value ? { cookbook: cookbookIdParam.value } : {}),
     ingredients: ingredientLines.value
       .filter((l) => l.name.trim())
       .map((l) => ({
@@ -243,6 +259,8 @@ export function useRecipeEditForm(props: {
     deleteModalOpen,
     isDeleting,
     currentRecipe,
+    cookbookId,
+    cookbookName,
     totalMinutes,
     onImageChange,
     addStep,
@@ -280,6 +298,7 @@ export function useRecipeView(recipeId: number) {
   const totalPrepMinutes = computed(() =>
     recipe.value ? sumStepMinutes(recipe.value.steps) : 0,
   );
+  const cookbookName = useCookbookName(() => recipe.value?.cookbook ?? null);
 
   const onToggleFavorite = async () => {
     if (!recipe.value) return;
@@ -312,6 +331,7 @@ export function useRecipeView(recipeId: number) {
     recipe,
     isOwner,
     totalPrepMinutes,
+    cookbookName,
     onToggleFavorite,
     confirmDelete,
     formatCookingDuration,

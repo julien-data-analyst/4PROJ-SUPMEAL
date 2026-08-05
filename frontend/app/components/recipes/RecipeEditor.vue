@@ -13,11 +13,14 @@ import TagsPanel from "~/components/recipes/TagsPanel.vue";
 import DiscussionPanel from "~/components/recipes/DiscussionPanel.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
 import { useRecipeEditForm } from "~/composables/useRecipesEditView";
+import { useGoBack } from "~/composables/useGoBack";
 
 const props = defineProps<{
   mode: "create" | "edit";
   recipeId?: number;
 }>();
+
+const goBack = useGoBack("/recipes");
 
 const {
   title,
@@ -34,6 +37,8 @@ const {
   savedNotice,
   deleteModalOpen,
   currentRecipe,
+  cookbookId,
+  cookbookName,
   totalMinutes,
   onImageChange,
   addStep,
@@ -49,13 +54,14 @@ const {
 <template>
   <div class="mx-auto max-w-[980px]">
     <div class="mb-[22px] flex flex-wrap items-center justify-between gap-4">
-      <NuxtLink
-        to="/recipes"
+      <button
+        type="button"
         class="flex items-center gap-[6px] text-[13px] font-medium text-gray-400 hover:text-sup-dark-green"
+        @click="goBack"
       >
         <IconChevronLeft size="xs" />
         Retour
-      </NuxtLink>
+      </button>
 
       <div class="flex flex-wrap items-center gap-[10px]">
         <AppButton
@@ -114,10 +120,18 @@ const {
             class="mb-1 w-full border-none bg-transparent text-[22px] font-bold text-sup-very-gray outline-none"
           />
           <div class="flex flex-wrap items-center gap-2">
+            <NuxtLink
+              v-if="cookbookId"
+              :to="`/cookbooks/${cookbookId}/view`"
+              class="inline-flex items-center gap-1 rounded-full bg-sup-light-green/15 px-[10px] py-[3px] text-[11px] font-semibold text-sup-dark-green hover:underline"
+            >
+              Dans le cookbook « {{ cookbookName || "…" }} »
+            </NuxtLink>
             <span
+              v-else
               class="inline-flex items-center gap-1 rounded-full bg-sup-light-green/15 px-[10px] py-[3px] text-[11px] font-semibold text-sup-dark-green"
             >
-              {{ currentRecipe?.cookbook ? "Dans un cookbook" : "Personnel" }}
+              Personnel
             </span>
             <span v-if="currentRecipe" class="text-[12.5px] text-gray-400">
               Dernière modification :
@@ -162,7 +176,7 @@ const {
         class="mb-4 flex items-center gap-2 rounded-md border border-sup-border bg-sup-light-green/10 px-4 py-[10px] text-[13px] font-semibold text-sup-dark-green"
       >
         <IconClock size="xs" />
-        Temps total estimé : {{ formatCookingDuration(totalMinutes) }}
+        Temps de préparation estimé : {{ formatCookingDuration(totalMinutes) }}
       </div>
 
       <p
