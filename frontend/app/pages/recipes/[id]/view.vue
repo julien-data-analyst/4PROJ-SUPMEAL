@@ -172,9 +172,8 @@ const {
                   class="h-6 w-6 rounded object-cover"
                 />
                 <span>
-                  {{ formatNumber(line.quantity) }}{{
-                    line.unity ? ` ${line.unity}` : ""
-                  }}
+                  {{ formatNumber(line.quantity)
+                  }}{{ line.unity ? ` ${line.unity}` : "" }}
                   {{ line.ingredient.name }}
                   <span class="text-[11px] text-gray-400"
                     >({{ formatNumber(line.person_numbers) }} pers.)</span

@@ -95,10 +95,7 @@ const {
             class="mb-1 w-full border-none bg-transparent text-[22px] font-bold text-sup-very-gray outline-none"
           />
           <div class="flex flex-wrap items-center gap-2">
-            <span
-              v-if="currentCookbook"
-              class="text-[12.5px] text-gray-400"
-            >
+            <span v-if="currentCookbook" class="text-[12.5px] text-gray-400">
               {{ currentCookbook.recipes.length }} recette{{
                 currentCookbook.recipes.length > 1 ? "s" : ""
               }}
