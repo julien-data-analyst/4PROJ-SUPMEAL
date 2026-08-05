@@ -57,7 +57,7 @@ const menuItemClasses =
 
 <template>
   <div
-    class="relative flex flex-col overflow-hidden rounded-[10px] border border-sup-border bg-sup-withe transition hover:-translate-y-px hover:shadow-md"
+    class="relative flex flex-col rounded-[10px] border border-sup-border bg-sup-withe transition hover:-translate-y-px hover:shadow-md"
   >
     <NuxtLink
       :to="to"
@@ -66,7 +66,7 @@ const menuItemClasses =
     />
 
     <div
-      class="flex h-[90px] w-full items-center justify-center overflow-hidden"
+      class="flex h-[90px] w-full items-center justify-center overflow-hidden rounded-t-[10px]"
       :class="cookbook.icon ? 'bg-sup-light-gray' : placeholderClass"
     >
       <img

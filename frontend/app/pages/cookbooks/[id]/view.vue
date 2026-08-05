@@ -137,7 +137,7 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
 
         <div
           v-if="recipes.length"
-          class="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-4"
+          class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
         >
           <RecipeCard
             v-for="recipe in recipes"

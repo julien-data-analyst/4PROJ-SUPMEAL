@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Planning } from "~/stores/usePlanningStore";
 import { usePlanningStore } from "~/stores/usePlanningStore";
+import { useToastStore } from "~/stores/useToastStore";
 import { relativeTime } from "~/composables/useRecipes";
 import { PLANNING_TYPE_LABELS } from "~/composables/usePlanning";
 import IconCalendar from "~/components/icons/IconCalendar.vue";
@@ -8,17 +9,24 @@ import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";
 import IconEdit from "~/components/icons/IconEdit.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
+import IconCookbook from "~/components/icons/IconCookbook.vue";
 import DeletePlanningModal from "~/components/planning/DeletePlanningModal.vue";
+import AssignCookbookMenu from "~/components/cookbook/AssignCookbookMenu.vue";
 
 const props = defineProps<{ planning: Planning; to: string }>();
 
 const store = usePlanningStore();
+const toast = useToastStore();
 
 const menuOpen = ref(false);
+const cookbookMenuOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 const deleteModalOpen = ref(false);
 
-onClickOutside(menuRef, () => (menuOpen.value = false));
+onClickOutside(menuRef, () => {
+  menuOpen.value = false;
+  cookbookMenuOpen.value = false;
+});
 
 const mealCountLabel = computed(() => {
   const count = props.planning.meals.length;
@@ -33,6 +41,18 @@ const openDeleteModal = () => {
 const confirmDelete = async () => {
   await store.deletePlanning(props.planning.id);
   deleteModalOpen.value = false;
+};
+
+const openCookbookMenu = () => {
+  menuOpen.value = false;
+  cookbookMenuOpen.value = true;
+};
+
+const onSelectCookbook = async (cookbook: { id: number; name: string }) => {
+  await store.updatePlanning(props.planning.id, { cookbook: cookbook.id });
+  store.plannings = store.plannings.filter((p) => p.id !== props.planning.id);
+  cookbookMenuOpen.value = false;
+  toast.success(`Planning ajouté au cookbook « ${cookbook.name} ».`);
 };
 
 const menuItemClasses =
@@ -105,12 +125,30 @@ const menuItemClasses =
         </NuxtLink>
         <button
           type="button"
+          :class="menuItemClasses"
+          @click.prevent="openCookbookMenu"
+        >
+          <IconCookbook size="xs" />
+          Cookbook
+        </button>
+        <button
+          type="button"
           :class="[menuItemClasses, 'text-sup-red-error']"
           @click.prevent="openDeleteModal"
         >
           <IconTrash size="xs" />
           Supprimer
         </button>
+      </div>
+
+      <div
+        v-if="cookbookMenuOpen"
+        class="absolute right-0 top-full mt-1 overflow-hidden rounded-md border border-sup-border bg-sup-withe shadow-lg"
+      >
+        <AssignCookbookMenu
+          :current-cookbook-id="planning.cookbook"
+          @select="onSelectCookbook"
+        />
       </div>
     </div>
 
