@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Planning } from "~/stores/usePlanningStore";
 import { usePlanningStore } from "~/stores/usePlanningStore";
+import { useToastStore } from "~/stores/useToastStore";
 import { relativeTime } from "~/composables/useRecipes";
 import { PLANNING_TYPE_LABELS } from "~/composables/usePlanning";
 import IconCalendar from "~/components/icons/IconCalendar.vue";
@@ -8,17 +9,24 @@ import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";
 import IconEdit from "~/components/icons/IconEdit.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
+import IconCookbook from "~/components/icons/IconCookbook.vue";
 import DeletePlanningModal from "~/components/planning/DeletePlanningModal.vue";
+import AssignCookbookMenu from "~/components/cookbook/AssignCookbookMenu.vue";
 
 const props = defineProps<{ planning: Planning; to: string }>();
 
 const store = usePlanningStore();
+const toast = useToastStore();
 
 const menuOpen = ref(false);
+const cookbookMenuOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 const deleteModalOpen = ref(false);
 
-onClickOutside(menuRef, () => (menuOpen.value = false));
+onClickOutside(menuRef, () => {
+  menuOpen.value = false;
+  cookbookMenuOpen.value = false;
+});
 
 const mealCountLabel = computed(() => {
   const count = props.planning.meals.length;
@@ -35,13 +43,25 @@ const confirmDelete = async () => {
   deleteModalOpen.value = false;
 };
 
+const openCookbookMenu = () => {
+  menuOpen.value = false;
+  cookbookMenuOpen.value = true;
+};
+
+const onSelectCookbook = async (cookbook: { id: number; name: string }) => {
+  await store.updatePlanning(props.planning.id, { cookbook: cookbook.id });
+  store.plannings = store.plannings.filter((p) => p.id !== props.planning.id);
+  cookbookMenuOpen.value = false;
+  toast.success(`Planning ajouté au cookbook « ${cookbook.name} ».`);
+};
+
 const menuItemClasses =
   "flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-sup-very-gray hover:bg-sup-light-gray";
 </script>
 
 <template>
   <div
-    class="relative flex items-center gap-3 rounded-[10px] border border-sup-border bg-sup-withe p-4 pr-9 transition hover:-translate-y-px hover:shadow-md"
+    class="relative flex items-center gap-3 rounded-[10px] border border-sup-border bg-sup-withe p-5 pr-10 transition hover:-translate-y-px hover:shadow-md"
   >
     <NuxtLink
       :to="to"
@@ -50,22 +70,22 @@ const menuItemClasses =
     />
 
     <div
-      class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-sup-light-gray"
+      class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-sup-light-gray"
     >
       <img
         v-if="planning.icon"
         :src="planning.icon"
         :alt="planning.name"
-        class="h-7 w-7 object-contain"
+        class="h-8 w-8 object-contain"
       />
       <IconCalendar v-else size="sm" />
     </div>
 
     <div class="min-w-0 flex-1">
-      <p class="truncate text-[13.5px] font-semibold text-sup-very-gray">
+      <p class="truncate text-[14.5px] font-semibold text-sup-very-gray">
         {{ planning.name }}
       </p>
-      <p class="truncate text-[11px] text-gray-400">
+      <p class="truncate text-[11.5px] text-gray-400">
         {{ PLANNING_TYPE_LABELS[planning.type] }} · {{ mealCountLabel }} ·
         {{ relativeTime(planning.updated_at) }}
       </p>
@@ -105,12 +125,30 @@ const menuItemClasses =
         </NuxtLink>
         <button
           type="button"
+          :class="menuItemClasses"
+          @click.prevent="openCookbookMenu"
+        >
+          <IconCookbook size="xs" />
+          Cookbook
+        </button>
+        <button
+          type="button"
           :class="[menuItemClasses, 'text-sup-red-error']"
           @click.prevent="openDeleteModal"
         >
           <IconTrash size="xs" />
           Supprimer
         </button>
+      </div>
+
+      <div
+        v-if="cookbookMenuOpen"
+        class="absolute right-0 top-full mt-1 overflow-hidden rounded-md border border-sup-border bg-sup-withe shadow-lg"
+      >
+        <AssignCookbookMenu
+          :current-cookbook-id="planning.cookbook"
+          @select="onSelectCookbook"
+        />
       </div>
     </div>
 
