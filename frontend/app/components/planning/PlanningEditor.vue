@@ -6,6 +6,7 @@ import IconSave from "~/components/icons/IconSave.vue";
 import IconCamera from "~/components/icons/IconCamera.vue";
 import MealPlanEditor from "~/components/planning/MealPlanEditor.vue";
 import DeletePlanningModal from "~/components/planning/DeletePlanningModal.vue";
+import DiscussionPanel from "~/components/cookbook/DiscussionPanel.vue";
 import { usePlanningEditForm } from "~/composables/usePlanningEditView";
 import { PLANNING_TYPE_LABELS } from "~/composables/usePlanning";
 import { relativeTime } from "~/composables/useRecipes";
@@ -166,6 +167,13 @@ const {
           @update-slot="setSlotRecipe"
         />
       </div>
+
+      <DiscussionPanel
+        v-if="currentPlanning?.cookbook"
+        class="mt-4"
+        :cookbook-id="currentPlanning.cookbook"
+        title="Discussion du cookbook"
+      />
     </template>
 
     <DeletePlanningModal

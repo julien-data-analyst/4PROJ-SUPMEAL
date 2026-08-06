@@ -14,7 +14,11 @@ import {
 } from "~/composables/usePlanning";
 import type { MealSlot } from "~/composables/usePlanning";
 import { useCookbookStore } from "~/stores/cookbooks/useCookbookStore";
-import { useCookbookName } from "~/composables/useCookbooks";
+import {
+  useCookbookName,
+  useCookbookRoleFor,
+  COOKBOOK_ROLE_RANK,
+} from "~/composables/useCookbooks";
 import type { Recipe } from "~/stores/useRecipeStore";
 
 export interface RecipePick {
@@ -167,7 +171,10 @@ export function usePlanningEditForm(props: {
       if (props.mode === "create") {
         const planning = await store.createPlanning(payload);
         toast.success("Planning créé.");
-        await navigateTo(`/planning/${planning.id}/edit`);
+        // Replaces this "create" entry so "Retour" from the edit page that
+        // follows lands on whatever page the user was on before creating
+        // the planning, not back onto a blank creation form.
+        await navigateTo(`/planning/${planning.id}/edit`, { replace: true });
       } else if (props.planningId) {
         await store.updatePlanning(props.planningId, payload);
         savedNotice.value = true;
@@ -249,6 +256,21 @@ export function usePlanningView(planningId: number) {
     planning.value ? mealsByDayAndSlot(planning.value.meals) : new Map(),
   );
   const cookbookName = useCookbookName(() => planning.value?.cookbook ?? null);
+  const cookbookRole = useCookbookRoleFor(
+    () => planning.value?.cookbook ?? null,
+  );
+  const canEdit = computed(
+    () =>
+      isOwner.value ||
+      (!!cookbookRole.value &&
+        COOKBOOK_ROLE_RANK[cookbookRole.value] >= COOKBOOK_ROLE_RANK.editor),
+  );
+  const canManage = computed(
+    () =>
+      isOwner.value ||
+      (!!cookbookRole.value &&
+        COOKBOOK_ROLE_RANK[cookbookRole.value] >= COOKBOOK_ROLE_RANK.creator),
+  );
 
   const confirmDelete = async () => {
     try {
@@ -267,6 +289,8 @@ export function usePlanningView(planningId: number) {
     deleteModalOpen,
     planning,
     isOwner,
+    canEdit,
+    canManage,
     mealsMap,
     cookbookName,
     confirmDelete,

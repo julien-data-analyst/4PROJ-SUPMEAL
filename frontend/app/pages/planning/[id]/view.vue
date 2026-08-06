@@ -6,6 +6,7 @@ import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
 import IconCalendar from "~/components/icons/IconCalendar.vue";
 import PlanningMealsGrid from "~/components/planning/PlanningMealsGrid.vue";
 import DeletePlanningModal from "~/components/planning/DeletePlanningModal.vue";
+import DiscussionPanel from "~/components/cookbook/DiscussionPanel.vue";
 import { usePlanningView } from "~/composables/usePlanningEditView";
 import { PLANNING_TYPE_LABELS } from "~/composables/usePlanning";
 import { useGoBack } from "~/composables/useGoBack";
@@ -19,7 +20,8 @@ const {
   isLoading,
   deleteModalOpen,
   planning,
-  isOwner,
+  canEdit,
+  canManage,
   cookbookName,
   confirmDelete,
 } = usePlanningView(planningId);
@@ -39,7 +41,7 @@ const {
 
       <div v-if="planning" class="flex flex-wrap items-center gap-[10px]">
         <button
-          v-if="isOwner"
+          v-if="canManage"
           type="button"
           class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-red-200 text-sup-red-error transition hover:bg-sup-red-error/10"
           title="Supprimer le planning"
@@ -48,7 +50,7 @@ const {
           <IconTrash size="xs" />
         </button>
         <AppButton
-          v-if="isOwner"
+          v-if="canEdit"
           variant="primary"
           :to="`/planning/${planningId}/edit`"
         >
@@ -120,12 +122,19 @@ const {
       </div>
 
       <div
-        v-if="!isOwner"
+        v-if="!canEdit"
         class="mt-4 flex items-center gap-2 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-[14px] py-[10px] text-[12.5px] font-medium text-[#8A6D00]"
       >
         <IconAlertTriangle size="xs" class="shrink-0" />
         Vous n'avez pas la permission de modifier ce planning.
       </div>
+
+      <DiscussionPanel
+        v-if="planning.cookbook"
+        class="mt-4"
+        :cookbook-id="planning.cookbook"
+        title="Discussion du cookbook"
+      />
     </template>
 
     <DeletePlanningModal
