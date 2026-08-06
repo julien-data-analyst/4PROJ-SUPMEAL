@@ -9,6 +9,8 @@ import IconUpload from "~/components/icons/IconUpload.vue";
 import IconDownload from "~/components/icons/IconDownload.vue";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
 import IconShared from "~/components/icons/IconShared.vue";
+import IconRecipe from "~/components/icons/IconRecipe.vue";
+import IconCalendar from "~/components/icons/IconCalendar.vue";
 import { useRecipes, sortFavoritesFirst } from "~/composables/useRecipes";
 import { usePlanning } from "~/composables/usePlanning";
 import {
@@ -99,11 +101,20 @@ const recentPlannings = computed(() =>
   ),
 );
 
+const newMenuOpen = ref(false);
+const newMenuRef = ref<HTMLElement | null>(null);
+onClickOutside(newMenuRef, () => (newMenuOpen.value = false));
+
+const newMenuItemClasses =
+  "flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-sup-very-gray hover:bg-sup-light-gray";
+
 const sharedActivityRoles = computed(() =>
   sharedActivityCookbooks.value.map((cookbook) => ({
     cookbook,
-    role: (getCookbookRole(cookbook, user.value?.id) ??
-      "reader") as Exclude<CookbookRole, "admin">,
+    role: (getCookbookRole(cookbook, user.value?.id) ?? "reader") as Exclude<
+      CookbookRole,
+      "admin"
+    >,
   })),
 );
 </script>
@@ -121,10 +132,46 @@ const sharedActivityRoles = computed(() =>
           <template #icon><IconDownload size="xs" /></template>
           Exporter
         </AppButton>
-        <AppButton variant="primary" to="/new">
-          <template #icon><IconPlus size="xs" /></template>
-          Nouveau
-        </AppButton>
+        <div ref="newMenuRef" class="relative">
+          <AppButton
+            type="button"
+            variant="primary"
+            @click="newMenuOpen = !newMenuOpen"
+          >
+            <template #icon><IconPlus size="xs" /></template>
+            Nouveau
+          </AppButton>
+
+          <div
+            v-if="newMenuOpen"
+            class="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-md border border-sup-border bg-sup-withe py-1 shadow-lg"
+          >
+            <NuxtLink
+              to="/new"
+              :class="newMenuItemClasses"
+              @click="newMenuOpen = false"
+            >
+              <IconRecipe size="xs" />
+              Nouvelle recette
+            </NuxtLink>
+            <NuxtLink
+              to="/planning/new"
+              :class="newMenuItemClasses"
+              @click="newMenuOpen = false"
+            >
+              <IconCalendar size="xs" />
+              Nouveau planning
+            </NuxtLink>
+            <NuxtLink
+              to="/cookbooks/new"
+              :class="newMenuItemClasses"
+              @click="newMenuOpen = false"
+            >
+              <IconCookbook size="xs" />
+              Nouveau cookbook
+            </NuxtLink>
+          </div>
+        </div>
       </div>
     </div>
 

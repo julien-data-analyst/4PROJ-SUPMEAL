@@ -6,7 +6,6 @@ import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
 import IconCalendar from "~/components/icons/IconCalendar.vue";
 import PlanningMealsGrid from "~/components/planning/PlanningMealsGrid.vue";
 import DeletePlanningModal from "~/components/planning/DeletePlanningModal.vue";
-import DiscussionPanel from "~/components/cookbook/DiscussionPanel.vue";
 import { usePlanningView } from "~/composables/usePlanningEditView";
 import { PLANNING_TYPE_LABELS } from "~/composables/usePlanning";
 import { useGoBack } from "~/composables/useGoBack";
@@ -128,13 +127,6 @@ const {
         <IconAlertTriangle size="xs" class="shrink-0" />
         Vous n'avez pas la permission de modifier ce planning.
       </div>
-
-      <DiscussionPanel
-        v-if="planning.cookbook"
-        class="mt-4"
-        :cookbook-id="planning.cookbook"
-        title="Discussion du cookbook"
-      />
     </template>
 
     <DeletePlanningModal

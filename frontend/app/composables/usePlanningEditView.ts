@@ -20,6 +20,7 @@ import {
   COOKBOOK_ROLE_RANK,
 } from "~/composables/useCookbooks";
 import type { Recipe } from "~/stores/useRecipeStore";
+import { useCookbookDiscussionContext } from "~/composables/useCookbookDiscussionContext";
 
 export interface RecipePick {
   id: number | null;
@@ -35,6 +36,18 @@ export function usePlanningEditForm(props: {
   const cookbookStore = useCookbookStore();
   const toast = useToastStore();
   const route = useRoute();
+
+  // `store.currentPlanning` is a global singleton that otherwise keeps
+  // pointing at whatever planning was last viewed/edited until the fetch
+  // below resolves - cleared synchronously here (not just in onMounted)
+  // so the cookbookId/discussion-context watchers set up next never
+  // briefly compute against a previous, unrelated planning's cookbook.
+  if (
+    props.mode === "create" ||
+    store.currentPlanning?.id !== props.planningId
+  ) {
+    store.currentPlanning = null;
+  }
 
   const name = ref("");
   const icon = ref<string | null>(null);
@@ -67,6 +80,22 @@ export function usePlanningEditForm(props: {
     () => currentPlanning.value?.cookbook ?? cookbookIdParam.value,
   );
   const cookbookName = useCookbookName(() => cookbookId.value);
+
+  const discussionContext = useCookbookDiscussionContext();
+  watch(
+    [cookbookId, currentPlanning],
+    () => {
+      discussionContext.value = cookbookId.value
+        ? {
+            cookbookId: cookbookId.value,
+            default: currentPlanning.value
+              ? { kind: "planning", id: currentPlanning.value.id }
+              : { kind: "general" },
+          }
+        : null;
+    },
+    { immediate: true },
+  );
 
   // A cookbook-scoped planning can only schedule recipes that belong to the
   // same cookbook, so the recipe picker's suggestions are restricted to this
@@ -236,6 +265,12 @@ export function usePlanningView(planningId: number) {
   const toast = useToastStore();
   const { user } = useAuth();
 
+  // See the identical guard in usePlanningEditForm - avoids a stale
+  // previously-viewed planning leaking into the computeds below.
+  if (store.currentPlanning?.id !== planningId) {
+    store.currentPlanning = null;
+  }
+
   const isLoading = ref(true);
   const deleteModalOpen = ref(false);
 
@@ -258,6 +293,17 @@ export function usePlanningView(planningId: number) {
   const cookbookName = useCookbookName(() => planning.value?.cookbook ?? null);
   const cookbookRole = useCookbookRoleFor(
     () => planning.value?.cookbook ?? null,
+  );
+
+  const discussionContext = useCookbookDiscussionContext();
+  watch(
+    planning,
+    (p) => {
+      discussionContext.value = p?.cookbook
+        ? { cookbookId: p.cookbook, default: { kind: "planning", id: p.id } }
+        : null;
+    },
+    { immediate: true },
   );
   const canEdit = computed(
     () =>

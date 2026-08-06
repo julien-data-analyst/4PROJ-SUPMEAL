@@ -140,7 +140,10 @@ const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
       </div>
 
       <section v-if="activeTab === 'recettes'">
-        <div v-if="canManageContent" class="mb-[14px] flex items-center justify-end">
+        <div
+          v-if="canManageContent"
+          class="mb-[14px] flex items-center justify-end"
+        >
           <AppButton variant="primary" :to="`/new?cookbook=${cookbookId}`">
             <template #icon><IconPlus size="xs" /></template>
             Ajouter une recette
@@ -158,6 +161,7 @@ const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
             :to="`/recipes/${recipe.id}/view`"
             :can-edit="canEditContent"
             :can-manage="canManageContent"
+            :can-reassign-cookbook="false"
           />
         </div>
         <div
@@ -169,7 +173,10 @@ const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
       </section>
 
       <section v-else-if="activeTab === 'planning'">
-        <div v-if="canManageContent" class="mb-[14px] flex items-center justify-end">
+        <div
+          v-if="canManageContent"
+          class="mb-[14px] flex items-center justify-end"
+        >
           <AppButton
             variant="primary"
             :to="`/planning/new?cookbook=${cookbookId}`"
@@ -190,6 +197,7 @@ const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
             :to="`/planning/${planning.id}/view`"
             :can-edit="canEditContent"
             :can-manage="canManageContent"
+            :can-reassign-cookbook="false"
           />
         </div>
         <div

@@ -7,6 +7,7 @@ import { useToastStore } from "~/stores/useToastStore";
 import { useAuth } from "~/composables/useAuth";
 import { fileToDataUrl, isAllowedImageFile } from "~/composables/useRecipes";
 import { getCookbookRole, hasCookbookRank } from "~/composables/useCookbooks";
+import { useCookbookDiscussionContext } from "~/composables/useCookbookDiscussionContext";
 
 export interface DeleteCookbookOptions {
   keepRecipes: boolean;
@@ -50,6 +51,17 @@ export function useCookbookEditForm(props: {
 }) {
   const store = useCookbookStore();
   const toast = useToastStore();
+
+  // `store.currentCookbook` is a global singleton that otherwise keeps
+  // pointing at whatever cookbook was last viewed/edited until the fetch
+  // below resolves - cleared synchronously here so nothing reads a
+  // previous, unrelated cookbook's data in the meantime.
+  if (
+    props.mode === "create" ||
+    store.currentCookbook?.id !== props.cookbookId
+  ) {
+    store.currentCookbook = null;
+  }
 
   const name = ref("");
   const icon = ref<string | null>(null);
@@ -177,6 +189,15 @@ export function useCookbookView(cookbookId: number) {
   const planningStore = usePlanningStore();
   const toast = useToastStore();
   const { user } = useAuth();
+  const discussionContext = useCookbookDiscussionContext();
+
+  // See the identical guard in useCookbookEditForm - the page's header
+  // action row (Modifier/Supprimer) checks `isOwner` before `isLoading`
+  // gates the rest of the page, so a stale cookbook here could otherwise
+  // flash the wrong owner's controls for an instant.
+  if (store.currentCookbook?.id !== cookbookId) {
+    store.currentCookbook = null;
+  }
 
   const isLoading = ref(true);
   const deleteModalOpen = ref(false);
@@ -191,6 +212,7 @@ export function useCookbookView(cookbookId: number) {
       // those stores directly) stay in sync here for free.
       recipeStore.recipes = cookbook.recipes;
       planningStore.plannings = cookbook.plannings;
+      discussionContext.value = { cookbookId, default: { kind: "general" } };
     } finally {
       isLoading.value = false;
     }
@@ -211,11 +233,13 @@ export function useCookbookView(cookbookId: number) {
   // content is allowed.
   const canManageContent = computed(
     () =>
-      !!cookbook.value && hasCookbookRank(cookbook.value, user.value?.id, "creator"),
+      !!cookbook.value &&
+      hasCookbookRank(cookbook.value, user.value?.id, "creator"),
   );
   const canEditContent = computed(
     () =>
-      !!cookbook.value && hasCookbookRank(cookbook.value, user.value?.id, "editor"),
+      !!cookbook.value &&
+      hasCookbookRank(cookbook.value, user.value?.id, "editor"),
   );
 
   const confirmDelete = async (options: DeleteCookbookOptions) => {

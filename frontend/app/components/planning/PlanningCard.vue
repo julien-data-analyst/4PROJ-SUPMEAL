@@ -19,11 +19,15 @@ const props = withDefaults(
     to: string;
     // See RecipeCard's identical props - gates the menu for a shared
     // cookbook's reader/commentator (canEdit=false) or editor (canManage=
-    // false) role.
+    // false) role. canReassignCookbook separately hides just the
+    // "Cookbook" item - a cookbook's own Planning tab renders this card
+    // for a planning already filed there, where moving it to a different
+    // cookbook has no place in the UI.
     canEdit?: boolean;
     canManage?: boolean;
+    canReassignCookbook?: boolean;
   }>(),
-  { canEdit: true, canManage: true },
+  { canEdit: true, canManage: true, canReassignCookbook: true },
 );
 
 const store = usePlanningStore();
@@ -136,7 +140,7 @@ const menuItemClasses =
           Modifier
         </NuxtLink>
         <button
-          v-if="canManage"
+          v-if="canManage && canReassignCookbook"
           type="button"
           :class="menuItemClasses"
           @click.prevent="openCookbookMenu"

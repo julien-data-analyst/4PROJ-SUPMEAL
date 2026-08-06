@@ -8,11 +8,7 @@ import type { Planning } from "~/stores/usePlanningStore";
 // From least to most permissive - see backend's cookbooks.permissions.ROLE_RANK.
 // "admin" is never stored: it's implicit for the cookbook's own creator.
 export type CookbookRole =
-  | "reader"
-  | "commentator"
-  | "editor"
-  | "creator"
-  | "admin";
+  "reader" | "commentator" | "editor" | "creator" | "admin";
 
 export interface SharedUserCookbook {
   user: User;

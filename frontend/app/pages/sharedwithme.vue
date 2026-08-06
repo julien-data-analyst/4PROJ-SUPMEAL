@@ -36,8 +36,10 @@ watch(search, () => {
 const sharedCookbooks = computed(() =>
   store.cookbooks.map((cookbook) => ({
     cookbook,
-    role: (getCookbookRole(cookbook, user.value?.id) ??
-      "reader") as Exclude<CookbookRole, "admin">,
+    role: (getCookbookRole(cookbook, user.value?.id) ?? "reader") as Exclude<
+      CookbookRole,
+      "admin"
+    >,
   })),
 );
 </script>
