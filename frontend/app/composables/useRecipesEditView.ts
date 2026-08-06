@@ -42,10 +42,7 @@ export function useRecipeEditForm(props: {
   // below resolves - cleared synchronously here (not just in onMounted)
   // so the cookbookId/discussion-context watchers set up next never
   // briefly compute against a previous, unrelated recipe's cookbook.
-  if (
-    props.mode === "create" ||
-    store.currentRecipe?.id !== props.recipeId
-  ) {
+  if (props.mode === "create" || store.currentRecipe?.id !== props.recipeId) {
     store.currentRecipe = null;
   }
 
