@@ -8,15 +8,25 @@ from .models import Message
 class MessageSerializer(serializers.ModelSerializer):
     """Read-only representation of a message.
 
-    ``cookbook``/``recipe`` are always derived from the URL the message was
-    posted to (never from the request body) - see ``messaging.views``.
+    ``cookbook``/``recipe``/``planning`` are always derived from the URL the
+    message was posted to (never from the request body) - see
+    ``messaging.views``.
     """
 
     author = UserSerializer(read_only=True)
 
     class Meta:
         model = Message
-        fields = ["id", "content", "canal", "author", "cookbook", "recipe", "created_at"]
+        fields = [
+            "id",
+            "content",
+            "canal",
+            "author",
+            "cookbook",
+            "recipe",
+            "planning",
+            "created_at",
+        ]
         read_only_fields = fields
 
 

@@ -1,15 +1,17 @@
 from django.urls import path
 
-from .views import CookbookMessageViewSet, RecipeMessageViewSet
+from .views import CookbookMessageViewSet, PlanningMessageViewSet, RecipeMessageViewSet
 
-# Nested under cookbooks/recipes rather than a DefaultRouter: messages only
-# ever make sense scoped to a cookbook (and optionally one of its recipes),
-# and there's no drf-nested-routers dependency in this project - see
-# messaging/views.py for how cookbook_pk/recipe_pk are resolved.
+# Nested under cookbooks/recipes/plannings rather than a DefaultRouter: messages only
+# ever make sense scoped to a cookbook (and optionally one of its recipes or
+# plannings), and there's no drf-nested-routers dependency in this project - see
+# messaging/views.py for how cookbook_pk/recipe_pk/planning_pk are resolved.
 cookbook_messages_list = CookbookMessageViewSet.as_view({"get": "list", "post": "create"})
 cookbook_messages_detail = CookbookMessageViewSet.as_view({"get": "retrieve", "delete": "destroy"})
 recipe_messages_list = RecipeMessageViewSet.as_view({"get": "list", "post": "create"})
 recipe_messages_detail = RecipeMessageViewSet.as_view({"get": "retrieve", "delete": "destroy"})
+planning_messages_list = PlanningMessageViewSet.as_view({"get": "list", "post": "create"})
+planning_messages_detail = PlanningMessageViewSet.as_view({"get": "retrieve", "delete": "destroy"})
 
 urlpatterns = [
     path(
@@ -31,5 +33,15 @@ urlpatterns = [
         "cookbooks/<int:cookbook_pk>/recipes/<int:recipe_pk>/messages/<int:pk>/",
         recipe_messages_detail,
         name="recipe-message-detail",
+    ),
+    path(
+        "cookbooks/<int:cookbook_pk>/plannings/<int:planning_pk>/messages/",
+        planning_messages_list,
+        name="planning-message-list",
+    ),
+    path(
+        "cookbooks/<int:cookbook_pk>/plannings/<int:planning_pk>/messages/<int:pk>/",
+        planning_messages_detail,
+        name="planning-message-detail",
     ),
 ]

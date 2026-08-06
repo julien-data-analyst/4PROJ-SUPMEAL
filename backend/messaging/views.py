@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from config.pagination import DefaultPagination
 from cookbooks.models import Cookbook
+from planning.models import Planning
 from recipes.models import Recipe
 
 from .models import Message
@@ -25,6 +26,15 @@ RECIPE_PK_PARAMETER = OpenApiParameter(
     location=OpenApiParameter.PATH,
     description=(
         "ID de la recette (doit appartenir au cookbook `cookbook_pk`) dont on "
+        "consulte/alimente le canal de messages."
+    ),
+)
+PLANNING_PK_PARAMETER = OpenApiParameter(
+    name="planning_pk",
+    type=OpenApiTypes.INT,
+    location=OpenApiParameter.PATH,
+    description=(
+        "ID du planning (doit appartenir au cookbook `cookbook_pk`) dont on "
         "consulte/alimente le canal de messages."
     ),
 )
@@ -118,15 +128,17 @@ class BaseMessageViewSet(
     ),
 )
 class CookbookMessageViewSet(BaseMessageViewSet):
-    """Messages posted to a cookbook's global channel (``recipe`` is always ``None``)."""
+    """Messages posted to a cookbook's global channel (``recipe``/``planning`` are always ``None``)."""
 
     def get_queryset(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         return Message.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
-            cookbook=self.get_cookbook(), recipe__isnull=True
+            cookbook=self.get_cookbook(), recipe__isnull=True, planning__isnull=True
         ).select_related("author", "cookbook")
 
     def perform_create(self, serializer: MessageWriteSerializer) -> None:
-        serializer.save(author=self.request.user, cookbook=self.get_cookbook(), recipe=None)
+        serializer.save(
+            author=self.request.user, cookbook=self.get_cookbook(), recipe=None, planning=None
+        )
 
 
 @extend_schema_view(
@@ -191,4 +203,69 @@ class RecipeMessageViewSet(BaseMessageViewSet):
     def perform_create(self, serializer: MessageWriteSerializer) -> None:
         serializer.save(
             author=self.request.user, cookbook=self.get_cookbook(), recipe=self.get_recipe()
+        )
+
+
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[COOKBOOK_PK_PARAMETER, PLANNING_PK_PARAMETER],
+        tags=["Planning messages"],
+        description=(
+            "Liste les messages postes dans le canal du planning "
+            "`planning_pk` (au sein du cookbook `cookbook_pk`). Accessible a "
+            "tout membre du cookbook, y compris en lecture seule (`reader`)."
+        ),
+    ),
+    create=extend_schema(
+        parameters=[COOKBOOK_PK_PARAMETER, PLANNING_PK_PARAMETER],
+        request=MessageWriteSerializer,
+        responses=MessageSerializer,
+        tags=["Planning messages"],
+        description=(
+            "Poste un message dans le canal du planning `planning_pk`. "
+            "Necessite au moins le role `commentator` sur le cookbook "
+            "`cookbook_pk` - un `reader` recoit un 403."
+        ),
+    ),
+    retrieve=extend_schema(
+        parameters=[COOKBOOK_PK_PARAMETER, PLANNING_PK_PARAMETER],
+        tags=["Planning messages"],
+        description="Recupere un message du canal du planning par son id.",
+    ),
+    destroy=extend_schema(
+        parameters=[COOKBOOK_PK_PARAMETER, PLANNING_PK_PARAMETER],
+        tags=["Planning messages"],
+        description=(
+            "Supprime un message du canal du planning. Reserve a l'auteur "
+            "du message, a l'admin du cookbook (son createur) ou au staff. "
+            "Il n'existe pas de route de modification : un message se "
+            "supprime, il ne se modifie pas."
+        ),
+    ),
+)
+class PlanningMessageViewSet(BaseMessageViewSet):
+    """Messages posted to a specific planning's channel, within a cookbook.
+
+    The planning must belong to the cookbook named in the URL
+    (``planning.cookbook_id == cookbook_pk``) - otherwise ``get_planning()``
+    404s, mirroring ``RecipeMessageViewSet.get_recipe()``.
+    """
+
+    def get_planning(self) -> Planning:
+        if not hasattr(self, "_planning"):
+            self._planning = get_object_or_404(
+                Planning,  # pyright: ignore[reportAttributeAccessIssue]
+                pk=self.kwargs["planning_pk"],
+                cookbook=self.get_cookbook(),
+            )
+        return self._planning
+
+    def get_queryset(self):  # pyright: ignore[reportIncompatibleMethodOverride]
+        return Message.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+            cookbook=self.get_cookbook(), planning=self.get_planning()
+        ).select_related("author", "cookbook", "planning")
+
+    def perform_create(self, serializer: MessageWriteSerializer) -> None:
+        serializer.save(
+            author=self.request.user, cookbook=self.get_cookbook(), planning=self.get_planning()
         )
