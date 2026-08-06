@@ -2,6 +2,7 @@
 import AppButton from "~/components/buttons/AppButton.vue";
 import RecipeCard from "~/components/recipes/RecipeCard.vue";
 import PlanningCard from "~/components/planning/PlanningCard.vue";
+import CookbookMembersPanel from "~/components/cookbook/CookbookMembersPanel.vue";
 import IconChevronLeft from "~/components/icons/IconChevronLeft.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
 import IconPlus from "~/components/icons/IconPlus.vue";
@@ -9,6 +10,7 @@ import IconCookbook from "~/components/icons/IconCookbook.vue";
 import DeleteCookbookModal from "~/components/cookbook/DeleteCookbookModal.vue";
 import { useCookbookView } from "~/composables/useCookbooksEditView";
 import { useGoBack } from "~/composables/useGoBack";
+import { COOKBOOK_ROLE_LABELS } from "~/composables/useCookbooks";
 
 definePageMeta({ layout: "app" });
 
@@ -21,6 +23,9 @@ const {
   activeTab,
   cookbook,
   isOwner,
+  myRole,
+  canManageContent,
+  canEditContent,
   recipes,
   plannings,
   confirmDelete,
@@ -29,9 +34,10 @@ const {
 const tabs = [
   { key: "recettes" as const, label: "Recettes" },
   { key: "planning" as const, label: "Planning" },
+  { key: "membres" as const, label: "Membres" },
 ];
 
-const tabButtonClasses = (key: "recettes" | "planning") => [
+const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
   "border-b-2 px-1 pb-[10px] text-[13.5px] font-semibold transition",
   activeTab.value === key
     ? "border-sup-dark-green text-sup-dark-green"
@@ -102,6 +108,12 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
               }}
             </span>
             <span
+              v-if="!isOwner && myRole"
+              class="inline-flex items-center rounded-full bg-sup-light-green/15 px-[10px] py-[3px] text-[11px] font-semibold text-sup-dark-green"
+            >
+              {{ COOKBOOK_ROLE_LABELS[myRole] }}
+            </span>
+            <span
               >· {{ recipes.length }} recette{{
                 recipes.length > 1 ? "s" : ""
               }}</span
@@ -128,7 +140,7 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
       </div>
 
       <section v-if="activeTab === 'recettes'">
-        <div class="mb-[14px] flex items-center justify-end">
+        <div v-if="canManageContent" class="mb-[14px] flex items-center justify-end">
           <AppButton variant="primary" :to="`/new?cookbook=${cookbookId}`">
             <template #icon><IconPlus size="xs" /></template>
             Ajouter une recette
@@ -144,6 +156,8 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
             :key="recipe.id"
             :recipe="recipe"
             :to="`/recipes/${recipe.id}/view`"
+            :can-edit="canEditContent"
+            :can-manage="canManageContent"
           />
         </div>
         <div
@@ -154,8 +168,8 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
         </div>
       </section>
 
-      <section v-else>
-        <div class="mb-[14px] flex items-center justify-end">
+      <section v-else-if="activeTab === 'planning'">
+        <div v-if="canManageContent" class="mb-[14px] flex items-center justify-end">
           <AppButton
             variant="primary"
             :to="`/planning/new?cookbook=${cookbookId}`"
@@ -174,6 +188,8 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
             :key="planning.id"
             :planning="planning"
             :to="`/planning/${planning.id}/view`"
+            :can-edit="canEditContent"
+            :can-manage="canManageContent"
           />
         </div>
         <div
@@ -182,6 +198,15 @@ const tabButtonClasses = (key: "recettes" | "planning") => [
         >
           Aucun planning dans ce cookbook pour le moment.
         </div>
+      </section>
+
+      <section v-else>
+        <CookbookMembersPanel
+          :cookbook-id="cookbookId"
+          :creator="cookbook.creator"
+          :shared-with="cookbook.shared_with"
+          :is-owner="isOwner"
+        />
       </section>
     </template>
 

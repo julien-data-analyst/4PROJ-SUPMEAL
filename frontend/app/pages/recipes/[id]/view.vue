@@ -5,6 +5,7 @@ import IconStar from "~/components/icons/IconStar.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
 import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
+import DiscussionPanel from "~/components/cookbook/DiscussionPanel.vue";
 import { useRecipeView } from "~/composables/useRecipesEditView";
 import { formatNumber } from "~/composables/useRecipes";
 import { useGoBack } from "~/composables/useGoBack";
@@ -18,7 +19,8 @@ const {
   isLoading,
   deleteModalOpen,
   recipe,
-  isOwner,
+  canEdit,
+  canManage,
   totalPrepMinutes,
   cookbookName,
   onToggleFavorite,
@@ -53,7 +55,7 @@ const {
           {{ recipe.is_favorite ? "Favori" : "Ajouter aux favoris" }}
         </AppButton>
         <button
-          v-if="isOwner"
+          v-if="canManage"
           type="button"
           class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-red-200 text-sup-red-error transition hover:bg-sup-red-error/10"
           title="Supprimer la recette"
@@ -62,7 +64,7 @@ const {
           <IconTrash size="xs" />
         </button>
         <AppButton
-          v-if="isOwner"
+          v-if="canEdit"
           variant="primary"
           :to="`/recipes/${recipeId}/edit`"
         >
@@ -213,12 +215,20 @@ const {
       </div>
 
       <div
-        v-if="!isOwner"
+        v-if="!canEdit"
         class="mt-4 flex items-center gap-2 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-[14px] py-[10px] text-[12.5px] font-medium text-[#8A6D00]"
       >
         <IconAlertTriangle size="xs" class="shrink-0" />
         Vous n'avez pas la permission de modifier cette recette.
       </div>
+
+      <DiscussionPanel
+        v-if="recipe.cookbook"
+        class="mt-4"
+        :cookbook-id="recipe.cookbook"
+        :recipe-id="recipe.id"
+        title="Discussion sur cette recette"
+      />
     </template>
 
     <DeleteRecipeModal
