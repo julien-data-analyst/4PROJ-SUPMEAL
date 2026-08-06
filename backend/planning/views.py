@@ -121,8 +121,10 @@ class PlanningViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_destroy(self, instance: Planning) -> None:
-        # RecipePlanning is a PROTECTed FK to Planning (no cascade), so its
-        # rows must be unlinked explicitly before the planning itself can go.
+        # RecipePlanning and Message are both PROTECTed FKs to Planning (no
+        # cascade), so their rows must be unlinked explicitly before the
+        # planning itself can go - mirrors RecipeViewSet.perform_destroy.
         with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
             instance.recipe_plannings.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
+            instance.messages.all().delete()  # pyright: ignore[reportAttributeAccessIssue]
             instance.delete()
