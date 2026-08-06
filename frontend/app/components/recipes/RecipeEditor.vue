@@ -10,7 +10,6 @@ import IconClock from "~/components/icons/IconClock.vue";
 import StepEditor from "~/components/recipes/StepEditor.vue";
 import IngredientsPanel from "~/components/recipes/IngredientsPanel.vue";
 import TagsPanel from "~/components/recipes/TagsPanel.vue";
-import DiscussionPanel from "~/components/cookbook/DiscussionPanel.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
 import { useRecipeEditForm } from "~/composables/useRecipesEditView";
 import { useGoBack } from "~/composables/useGoBack";
@@ -220,12 +219,6 @@ const {
 
         <div class="order-3 flex flex-col gap-5">
           <TagsPanel v-model="tagLines" />
-          <DiscussionPanel
-            v-if="currentRecipe?.cookbook"
-            :cookbook-id="currentRecipe.cookbook"
-            :recipe-id="currentRecipe.id"
-            title="Discussion sur cette recette"
-          />
         </div>
       </div>
     </template>

@@ -5,9 +5,8 @@ import IconStar from "~/components/icons/IconStar.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
 import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
-import DiscussionPanel from "~/components/cookbook/DiscussionPanel.vue";
 import { useRecipeView } from "~/composables/useRecipesEditView";
-import { formatNumber } from "~/composables/useRecipes";
+import { formatNumber, duryToMinutes } from "~/composables/useRecipes";
 import { useGoBack } from "~/composables/useGoBack";
 
 definePageMeta({ layout: "app" });
@@ -200,6 +199,12 @@ const {
                 <p class="mb-1 text-[14.5px] font-bold text-sup-very-gray">
                   {{ index + 1 }}.
                   {{ step.type === "cook" ? "Cuisson" : "Préparation" }}
+                  <span
+                    v-if="Number(duryToMinutes(step.dury)) > 0"
+                    class="text-[12px] font-normal text-gray-400"
+                  >
+                    ({{ formatNumber(duryToMinutes(step.dury)) }} min)
+                  </span>
                 </p>
                 <div
                   class="text-[13.5px] text-sup-very-gray"
@@ -221,14 +226,6 @@ const {
         <IconAlertTriangle size="xs" class="shrink-0" />
         Vous n'avez pas la permission de modifier cette recette.
       </div>
-
-      <DiscussionPanel
-        v-if="recipe.cookbook"
-        class="mt-4"
-        :cookbook-id="recipe.cookbook"
-        :recipe-id="recipe.id"
-        title="Discussion sur cette recette"
-      />
     </template>
 
     <DeleteRecipeModal

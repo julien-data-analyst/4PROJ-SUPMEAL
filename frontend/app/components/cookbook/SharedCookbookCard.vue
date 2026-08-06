@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { Cookbook, CookbookRole } from "~/stores/cookbooks/useCookbookStore";
+import type {
+  Cookbook,
+  CookbookRole,
+} from "~/stores/cookbooks/useCookbookStore";
 import { COOKBOOK_ROLE_LABELS } from "~/composables/useCookbooks";
 import { relativeTime } from "~/composables/useRecipes";
 import IconCookbook from "~/components/icons/IconCookbook.vue";

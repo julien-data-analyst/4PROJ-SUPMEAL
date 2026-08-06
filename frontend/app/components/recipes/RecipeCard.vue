@@ -24,8 +24,13 @@ const props = withDefaults(
     // lists, or a cookbook's admin/creator) always has full rights.
     canEdit?: boolean;
     canManage?: boolean;
+    // Separately hides just the "Cookbook" (reassign) menu item, even when
+    // canManage allows deleting - a cookbook's own Recettes tab renders
+    // this card for a recipe already filed there, where moving it to a
+    // *different* cookbook has no place in the UI.
+    canReassignCookbook?: boolean;
   }>(),
-  { canEdit: true, canManage: true },
+  { canEdit: true, canManage: true, canReassignCookbook: true },
 );
 
 const store = useRecipeStore();
@@ -205,7 +210,7 @@ const menuItemClasses =
           Modifier
         </NuxtLink>
         <button
-          v-if="canManage"
+          v-if="canManage && canReassignCookbook"
           type="button"
           :class="menuItemClasses"
           @click.prevent="openCookbookMenu"
