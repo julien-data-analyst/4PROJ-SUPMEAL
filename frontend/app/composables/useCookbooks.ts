@@ -91,8 +91,12 @@ export function useCookbookRoleFor(getId: () => number | null) {
 export function useCookbooks() {
   const store = useCookbookStore();
 
-  const fetchMyCookbooks = (search = "") =>
-    store.fetchCookbooks({ shared_with_me: false, name: search || undefined });
+  const fetchMyCookbooks = (search = "", page = 1) =>
+    store.fetchCookbooks({
+      shared_with_me: false,
+      name: search || undefined,
+      page,
+    });
 
   const fetchRecentCookbooks = (limit = 3) =>
     store.fetchCookbooks({ shared_with_me: false, page_size: limit });

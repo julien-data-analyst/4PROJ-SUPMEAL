@@ -9,7 +9,10 @@ import type {
   CookbookFilterState,
 } from "~/composables/useSearch";
 
-defineProps<{ type: SearchType }>();
+withDefaults(
+  defineProps<{ type: SearchType; showCookbookScope?: boolean }>(),
+  { showCookbookScope: true },
+);
 
 const emit = defineEmits<{ search: []; reset: [] }>();
 
@@ -69,7 +72,7 @@ const rangeInputClasses =
           :class="fieldInputClasses"
         />
       </div>
-      <div>
+      <div v-if="showCookbookScope">
         <label :class="fieldLabelClasses" for="filter-recipe-cookbook-scope">
           Cookbook
         </label>
@@ -203,7 +206,7 @@ const rangeInputClasses =
           </option>
         </select>
       </div>
-      <div>
+      <div v-if="showCookbookScope">
         <label :class="fieldLabelClasses" for="filter-planning-cookbook-scope">
           Cookbook
         </label>
