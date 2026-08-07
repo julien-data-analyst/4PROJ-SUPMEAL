@@ -5,6 +5,7 @@ import {
   deleteCookbookWithOptions,
   type DeleteCookbookOptions,
 } from "~/composables/useCookbooksEditView";
+import { useToastStore } from "~/stores/useToastStore";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
 import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";
@@ -38,6 +39,7 @@ const placeholderClass = computed(
   () => placeholderGradients[props.cookbook.id % placeholderGradients.length],
 );
 
+const toast = useToastStore();
 const menuOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 const deleteModalOpen = ref(false);
@@ -63,6 +65,7 @@ const confirmDelete = async (options: DeleteCookbookOptions) => {
     options,
   );
   deleteModalOpen.value = false;
+  toast.success("Cookbook supprimé.");
 };
 
 const menuItemClasses =

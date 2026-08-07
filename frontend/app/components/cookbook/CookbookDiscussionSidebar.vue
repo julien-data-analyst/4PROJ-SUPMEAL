@@ -3,6 +3,7 @@ import { useApi } from "~/composables/useAPI";
 import { relativeTime } from "~/composables/useRecipes";
 import { useAuth } from "~/composables/useAuth";
 import { useCookbookStore } from "~/stores/cookbooks/useCookbookStore";
+import { useToastStore } from "~/stores/useToastStore";
 import {
   getCookbookRole,
   COOKBOOK_ROLE_RANK,
@@ -38,6 +39,7 @@ const props = defineProps<{
 const { get, post, del } = useApi();
 const { user } = useAuth();
 const store = useCookbookStore();
+const toast = useToastStore();
 
 const cookbook = ref<Cookbook | null>(null);
 const isLoadingCookbook = ref(true);
@@ -54,6 +56,10 @@ const canComment = computed(
     COOKBOOK_ROLE_RANK[cookbookRole.value] >= COOKBOOK_ROLE_RANK.commentator,
 );
 const isCookbookAdmin = computed(() => cookbookRole.value === "admin");
+// A cookbook with no one else on it (creator only, `shared_with` empty) has
+// no one to discuss with - hide the panel entirely rather than show an
+// empty chat only the sole member could ever post in.
+const isAlone = computed(() => cookbook.value?.shared_with.length === 0);
 
 // "general" | "recipe:<id>" | "planning:<id>" - a single string key keeps
 // the <select> trivial to bind to, unpacked into {kind, id} below.
@@ -170,6 +176,7 @@ const remove = async (message: ChannelMessage) => {
   try {
     await del(`${endpoint.value}${message.id}/`);
     messages.value = messages.value.filter((m) => m.id !== message.id);
+    toast.success("Message supprimé.");
   } finally {
     deletingId.value = null;
   }
@@ -177,7 +184,10 @@ const remove = async (message: ChannelMessage) => {
 </script>
 
 <template>
-  <div v-if="!isLoadingCookbook && canComment" class="flex h-full flex-col">
+  <div
+    v-if="!isLoadingCookbook && canComment && !isAlone"
+    class="flex h-full flex-col"
+  >
     <p
       class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400"
     >
