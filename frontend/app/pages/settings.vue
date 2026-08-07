@@ -2,6 +2,7 @@
 import AppButton from "~/components/buttons/AppButton.vue";
 import AppInput from "~/components/forms/AppInput.vue";
 import ConfirmModal from "~/components/common/ConfirmModal.vue";
+import CuisinePreferencesPanel from "~/components/settings/CuisinePreferencesPanel.vue";
 import IconUser from "~/components/icons/IconUser.vue";
 import IconCamera from "~/components/icons/IconCamera.vue";
 import IconMicrosoft from "~/components/icons/IconMicrosoft.vue";
@@ -158,6 +159,7 @@ const confirmDeleteAccount = async () => {
   try {
     await userStore.deleteAccount(user.value.id);
     useAuth().clearSession();
+    toast.success("Compte supprimé.");
     await navigateTo("/login");
   } catch {
     toast.error(userStore.error || "Impossible de supprimer le compte.");
@@ -373,6 +375,8 @@ const confirmDeleteAccount = async () => {
         </AppButton>
       </div>
     </div>
+
+    <CuisinePreferencesPanel class="mt-5" />
 
     <ConfirmModal
       :open="usernameConfirmOpen"
