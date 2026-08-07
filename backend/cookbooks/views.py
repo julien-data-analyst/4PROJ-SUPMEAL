@@ -29,6 +29,7 @@ from .serializers import (
 
 COOKBOOK_EXPORT_EXAMPLE = {
     "name": "Recettes de famille",
+    "icon": None,
     "recipes": [
         {
             "id": 12,
@@ -61,6 +62,7 @@ COOKBOOK_EXPORT_EXAMPLE = {
     "plannings": [
         {
             "name": "Semaine 1",
+            "icon": None,
             "meals": [
                 {"recipe_id": 12, "type": "plat", "lunch": "midi", "dayofweek": "lundi"},
             ],
@@ -162,15 +164,16 @@ COOKBOOK_EXPORT_EXAMPLE = {
         responses=CookbookExportSerializer,
         description=(
             "Export a single cookbook (identified by `id` in the URL) as a portable JSON "
-            "object: its `name`, the list of its `recipes` (each in the same shape as "
-            "`GET /api/recipes/{id}/export/`, plus an export-local `id` used only to link "
-            "it to plannings below) and the list of its `plannings`, each with its scheduled "
-            "`meals` referencing a recipe via `recipe_id` (matching one of the `id`s in "
-            "`recipes[]` above - **not** a database id). Cookbook members (`shared_with`) "
-            "are never included. A meal scheduling a recipe that isn't filed into this "
-            "cookbook is silently omitted, since it has nothing to link to. The result can "
-            "be re-imported as-is via `POST /api/cookbooks/import/`. Any cookbook you can "
-            "read (your own, or one shared with you, at any role) can be exported this way."
+            "object: its `name` and `icon`, the list of its `recipes` (each in the same "
+            "shape as `GET /api/recipes/{id}/export/`, plus an export-local `id` used only "
+            "to link it to plannings below) and the list of its `plannings` (each with its "
+            "own `icon` and its scheduled `meals`, referencing a recipe via `recipe_id` "
+            "matching one of the `id`s in `recipes[]` above - **not** a database id). "
+            "Cookbook members (`shared_with`) are never included. A meal scheduling a "
+            "recipe that isn't filed into this cookbook is silently omitted, since it has "
+            "nothing to link to. The result can be re-imported as-is via "
+            "`POST /api/cookbooks/import/`. Any cookbook you can read (your own, or one "
+            "shared with you, at any role) can be exported this way."
         ),
         examples=[
             OpenApiExample(
@@ -188,8 +191,23 @@ COOKBOOK_EXPORT_EXAMPLE = {
             "JSON array, one portable object per cookbook - see "
             "`GET /api/cookbooks/{id}/export/` for the shape of each object. Cookbooks only "
             "shared with you (not created by you) are not included. The whole array can be "
-            "re-imported as-is via `POST /api/cookbooks/import/`."
+            "re-imported as-is via `POST /api/cookbooks/import/`. Pass `ids` (a "
+            "comma-separated list of cookbook ids) to export only a subset of your cookbooks "
+            "instead of all of them."
         ),
+        parameters=[
+            OpenApiParameter(
+                name="ids",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Comma-separated list of cookbook ids to export (e.g. `1,2,3`). Only ids "
+                    "among the cookbooks you created are matched; unknown or foreign ids are "
+                    "silently ignored. Omit to export all of the cookbooks you created."
+                ),
+                required=False,
+                examples=[OpenApiExample("Exemple", value="1,2,3")],
+            ),
+        ],
         examples=[
             OpenApiExample(
                 "Exported cookbooks you created",
@@ -376,6 +394,10 @@ class CookbookViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="export")
     def export_list(self, request: Request) -> Response:
         cookbooks = self.get_queryset().filter(creator=request.user)
+        ids = request.query_params.get("ids")
+        if isinstance(ids, str) and ids:
+            id_list = [int(token) for token in ids.split(",") if token.strip().isdigit()]
+            cookbooks = cookbooks.filter(pk__in=id_list)
         return Response(
             export_cookbooks(cookbooks),
             headers={"Content-Disposition": 'attachment; filename="cookbooks_export.json"'},

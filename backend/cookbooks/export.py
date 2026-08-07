@@ -45,9 +45,14 @@ def export_cookbook(cookbook: Cookbook) -> dict:
             for meal in planning.recipe_plannings.all()  # pyright: ignore[reportAttributeAccessIssue]
             if meal.recipe_id in recipe_ids
         ]
-        plannings_data.append({"name": planning.name, "meals": meals})
+        plannings_data.append({"name": planning.name, "icon": planning.icon, "meals": meals})
 
-    return {"name": cookbook.name, "recipes": recipes_data, "plannings": plannings_data}
+    return {
+        "name": cookbook.name,
+        "icon": cookbook.icon,
+        "recipes": recipes_data,
+        "plannings": plannings_data,
+    }
 
 
 def export_cookbooks(cookbooks) -> list[dict]:
@@ -77,6 +82,7 @@ class CookbookExportPlanningSerializer(serializers.Serializer):
     """One planning within a cookbook export's plannings[]."""
 
     name = serializers.CharField()
+    icon = serializers.CharField(allow_null=True)
     meals = CookbookExportMealSerializer(many=True)
 
 
@@ -90,5 +96,6 @@ class CookbookExportSerializer(serializers.Serializer):
     """
 
     name = serializers.CharField()
+    icon = serializers.CharField(allow_null=True)
     recipes = CookbookExportRecipeSerializer(many=True)
     plannings = CookbookExportPlanningSerializer(many=True)
