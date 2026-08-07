@@ -119,9 +119,7 @@ class PlanningViewSet(viewsets.ModelViewSet):
                 | models.Q(cookbook__shared_with__user=user)
             )
             .select_related("creator", "cookbook")
-            .prefetch_related(
-                Prefetch("recipe_plannings__recipe", queryset=favorited_recipes)
-            )
+            .prefetch_related(Prefetch("recipe_plannings__recipe", queryset=favorited_recipes))
             .distinct()
             .order_by("-updated_at")
         )
