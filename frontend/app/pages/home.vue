@@ -86,10 +86,12 @@ onMounted(async () => {
 
 // store.recipes only holds this page's fetched batch (page_size: 3), so
 // favoriting/deleting a card here reactively re-sorts/shrinks this list too.
+// Sorted by `updated_at` (recently modified), matching the "Mes cookbooks"/
+// "Mes plannings repas" sections below rather than creation date.
 const recentRecipes = computed(() => {
   const byDate = [...store.recipes].sort(
     (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
   );
   return sortFavoritesFirst(byDate);
 });
@@ -175,11 +177,11 @@ const sharedActivityRoles = computed(() =>
       </div>
     </div>
 
-    <!-- Récemment ajoutées -->
+    <!-- Mes recettes -->
     <section class="mb-[30px]">
       <div class="mb-[14px] flex items-center justify-between">
         <h2 class="text-[18px] font-semibold text-sup-very-gray">
-          Récemment ajoutées
+          Mes recettes
         </h2>
         <NuxtLink
           to="/recipes"

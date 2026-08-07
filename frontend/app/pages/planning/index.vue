@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppButton from "~/components/buttons/AppButton.vue";
 import PlanningCard from "~/components/planning/PlanningCard.vue";
+import Pagination from "~/components/common/Pagination.vue";
 import IconPlus from "~/components/icons/IconPlus.vue";
 import IconSearch from "~/components/icons/IconSearch.vue";
 import { usePlanning } from "~/composables/usePlanning";
@@ -10,13 +11,14 @@ definePageMeta({ layout: "app" });
 const { store, fetchMyPlannings } = usePlanning();
 
 const search = ref("");
+const currentPage = ref(1);
 const isLoading = ref(true);
 let debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
 const load = async () => {
   isLoading.value = true;
   try {
-    await fetchMyPlannings(search.value);
+    await fetchMyPlannings(search.value, currentPage.value);
   } finally {
     isLoading.value = false;
   }
@@ -25,9 +27,12 @@ const load = async () => {
 onMounted(load);
 
 watch(search, () => {
+  currentPage.value = 1;
   if (debounceHandle) clearTimeout(debounceHandle);
   debounceHandle = setTimeout(load, 300);
 });
+
+watch(currentPage, load);
 </script>
 
 <template>
@@ -93,5 +98,12 @@ watch(search, () => {
     >
       Aucun planning ne correspond à votre recherche.
     </div>
+
+    <Pagination
+      v-if="!isLoading"
+      v-model:current-page="currentPage"
+      :total-pages="store.pagination.total_pages"
+      class="mt-5"
+    />
   </div>
 </template>
