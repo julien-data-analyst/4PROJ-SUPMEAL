@@ -1,6 +1,9 @@
 // composables/useRecipesEditView.ts
 import { useRecipeStore } from "~/stores/useRecipeStore";
-import type { RecipeWritePayload } from "~/stores/useRecipeStore";
+import type {
+  RecipeWritePayload,
+  RecipeIngredientLine,
+} from "~/stores/useRecipeStore";
 import { useToastStore } from "~/stores/useToastStore";
 import { useAuth } from "~/composables/useAuth";
 import {
@@ -22,6 +25,7 @@ import {
   sumStepMinutes,
   renderStepMarkdown,
   useRecipes,
+  capitalizeFirst,
 } from "~/composables/useRecipes";
 import type {
   IngredientLine,
@@ -183,7 +187,7 @@ export function useRecipeEditForm(props: {
       if (!tag.name.trim()) continue;
       const key = tag.name.trim().toLowerCase();
       if (usedTagNames.has(key)) {
-        return `Le tag « ${tag.name} » est ajouté plusieurs fois.`;
+        return `Le tag « ${capitalizeFirst(tag.name)} » est ajouté plusieurs fois.`;
       }
       usedTagNames.add(key);
     }
@@ -211,7 +215,10 @@ export function useRecipeEditForm(props: {
     tags: tagLines.value
       .filter((t) => t.name.trim())
       .map((t) => ({
-        name: t.name.trim(),
+        // Always lowercase on the way in - keeps the shared tag catalogue
+        // free of case-variant duplicates (e.g. "Dessert" vs "dessert");
+        // display-only capitalization happens wherever a tag is rendered.
+        name: t.name.trim().toLowerCase(),
         type: t.type,
         description: t.description.trim() || null,
       })),
@@ -366,6 +373,42 @@ export function useRecipeView(recipeId: number) {
         COOKBOOK_ROLE_RANK[cookbookRole.value] >= COOKBOOK_ROLE_RANK.creator),
   );
 
+  // The recipe's own reference serving count: each ingredient line carries
+  // its own `person_numbers` (usually all equal, entered together via the
+  // editor's shared "Portion" default) - the most common value across lines
+  // is used as the recipe's base, falling back to 4 if it has none at all.
+  const basePersons = computed(() => {
+    const counts = recipe.value?.ingredients.map((l) => l.person_numbers) ?? [];
+    if (!counts.length) return 4;
+    const tally = new Map<number, number>();
+    for (const n of counts) tally.set(n, (tally.get(n) ?? 0) + 1);
+    return [...tally.entries()].sort((a, b) => b[1] - a[1])[0]![0];
+  });
+
+  // Starts at the recipe's own base (the creator's values, untouched) - the
+  // +/- stepper below then rescales every ingredient's quantity from there.
+  const selectedPersons = ref(basePersons.value);
+  watch(basePersons, (base) => {
+    selectedPersons.value = base;
+  });
+
+  const incrementPersons = () => {
+    selectedPersons.value += 1;
+  };
+  const decrementPersons = () => {
+    if (selectedPersons.value > 1) selectedPersons.value -= 1;
+  };
+
+  // Each line is scaled against its own `person_numbers`, so ingredients
+  // originally entered for a different serving count than the recipe's
+  // majority still scale correctly relative to the others.
+  const scaledQuantity = (line: RecipeIngredientLine): number => {
+    if (!line.person_numbers) return Number(line.quantity);
+    return (
+      (Number(line.quantity) * selectedPersons.value) / line.person_numbers
+    );
+  };
+
   const onToggleFavorite = async () => {
     if (!recipe.value) return;
     const nowFavorite = !recipe.value.is_favorite;
@@ -400,6 +443,11 @@ export function useRecipeView(recipeId: number) {
     canManage,
     totalPrepMinutes,
     cookbookName,
+    basePersons,
+    selectedPersons,
+    incrementPersons,
+    decrementPersons,
+    scaledQuantity,
     onToggleFavorite,
     confirmDelete,
     formatCookingDuration,

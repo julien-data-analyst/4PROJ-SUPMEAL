@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { Recipe } from "~/stores/useRecipeStore";
-import { relativeTime, useRecipes } from "~/composables/useRecipes";
+import {
+  relativeTime,
+  useRecipes,
+  capitalizeFirst,
+} from "~/composables/useRecipes";
 import { useRecipeStore } from "~/stores/useRecipeStore";
 import { useToastStore } from "~/stores/useToastStore";
 import { useCookbookName } from "~/composables/useCookbooks";
@@ -90,6 +94,7 @@ const openDeleteModal = () => {
 const confirmDelete = async () => {
   await store.deleteRecipe(props.recipe.id);
   deleteModalOpen.value = false;
+  toast.success("Recette supprimée.");
 };
 
 const openCookbookMenu = () => {
@@ -172,7 +177,7 @@ const menuItemClasses =
           :key="tag.id"
           class="rounded-full bg-sup-light-green/15 px-2 py-0.5 text-[10px] font-medium text-sup-dark-green"
         >
-          {{ tag.name }}
+          {{ capitalizeFirst(tag.name) }}
         </span>
       </div>
     </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TagLine } from "~/composables/useRecipes";
-import { uid } from "~/composables/useRecipes";
+import { uid, capitalizeFirst } from "~/composables/useRecipes";
 import { useRecipeStore } from "~/stores/useRecipeStore";
 import type { Tag } from "~/stores/useRecipeStore";
 import IconTag from "~/components/icons/IconTag.vue";
@@ -40,7 +40,10 @@ const addExisting = (tag: Tag) => {
     {
       key: uid("tag"),
       tagId: tag.id,
-      name: tag.name,
+      // Lowercased even when copied from an existing (possibly legacy
+      // mixed-case) Tag, so nothing re-submitted from here ever creates a
+      // new case-variant row.
+      name: tag.name.toLowerCase(),
       type: tag.type,
       description: tag.description ?? "",
     },
@@ -49,7 +52,7 @@ const addExisting = (tag: Tag) => {
 };
 
 const addNew = () => {
-  const name = search.value.trim();
+  const name = search.value.trim().toLowerCase();
   if (!name || isAlreadyAdded(name)) return;
   tags.value = [
     ...tags.value,
@@ -92,7 +95,7 @@ const exactMatchExists = computed(() =>
         :key="tag.key"
         class="inline-flex items-center gap-1 rounded-full bg-sup-light-green/15 px-[10px] py-[3px] text-[11px] font-semibold text-sup-dark-green"
       >
-        {{ tag.name }}
+        {{ capitalizeFirst(tag.name) }}
         <button
           type="button"
           class="hover:text-sup-red-error"
@@ -144,7 +147,7 @@ const exactMatchExists = computed(() =>
           class="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] text-sup-very-gray hover:bg-sup-light-gray"
           @click="addExisting(s)"
         >
-          {{ s.name }}
+          {{ capitalizeFirst(s.name) }}
           <IconPlus size="xs" />
         </button>
       </li>
@@ -157,7 +160,7 @@ const exactMatchExists = computed(() =>
       @click="addNew"
     >
       <IconPlus size="xs" />
-      Créer le tag « {{ search.trim() }} »
+      Créer le tag « {{ capitalizeFirst(search.trim()) }} »
     </button>
   </div>
 </template>

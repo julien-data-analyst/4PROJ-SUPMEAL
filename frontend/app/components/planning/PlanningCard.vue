@@ -60,6 +60,7 @@ const openDeleteModal = () => {
 const confirmDelete = async () => {
   await store.deletePlanning(props.planning.id);
   deleteModalOpen.value = false;
+  toast.success("Planning supprimé.");
 };
 
 const openCookbookMenu = () => {
