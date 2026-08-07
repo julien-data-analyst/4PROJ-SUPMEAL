@@ -1,4 +1,5 @@
 from django.db import models, transaction
+from django.db.models import Exists, OuterRef, Prefetch
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -12,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from config.pagination import DefaultPagination
 from cookbooks.permissions import CookbookItemPermission
+from recipes.models import FavoriteRecipe, Recipe
 
 from .filters import PlanningFilter
 from .models import Planning
@@ -98,6 +100,18 @@ class PlanningViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         user = self.request.user
+        # A meal's `recipe` is serialized with `RecipeSerializer`, which
+        # includes `is_favorite` - annotate it here too (mirrors
+        # RecipeViewSet.get_queryset), otherwise it silently defaults to
+        # `False` regardless of the caller's real favorites (DRF's
+        # `BooleanField(default=False)` swallows the missing-attribute error).
+        favorited_recipes = Recipe.objects.annotate(  # pyright: ignore[reportAttributeAccessIssue]
+            is_favorite=Exists(
+                FavoriteRecipe.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+                    user=user, recipe=OuterRef("pk")
+                )
+            )
+        )
         return (
             Planning.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
                 models.Q(creator=user)  # pyright: ignore[reportOperatorIssue]
@@ -105,7 +119,9 @@ class PlanningViewSet(viewsets.ModelViewSet):
                 | models.Q(cookbook__shared_with__user=user)
             )
             .select_related("creator", "cookbook")
-            .prefetch_related("recipe_plannings__recipe")
+            .prefetch_related(
+                Prefetch("recipe_plannings__recipe", queryset=favorited_recipes)
+            )
             .distinct()
             .order_by("-updated_at")
         )
