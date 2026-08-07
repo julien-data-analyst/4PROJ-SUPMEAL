@@ -19,6 +19,12 @@ export interface RecipeFilterState {
   planningScope: PlanningScope;
   planningName: string;
   favoriteScope: FavoriteScope;
+  // Frontend-only: narrows the currently loaded recipes by prep/cooking
+  // time (minutes), never sent to the backend.
+  prepTimeMin: number | "";
+  prepTimeMax: number | "";
+  cookingTimeMin: number | "";
+  cookingTimeMax: number | "";
 }
 
 export interface PlanningFilterState {
@@ -42,6 +48,10 @@ export function createRecipeFilters(): RecipeFilterState {
     planningScope: "all",
     planningName: "",
     favoriteScope: "all",
+    prepTimeMin: "",
+    prepTimeMax: "",
+    cookingTimeMin: "",
+    cookingTimeMax: "",
   };
 }
 

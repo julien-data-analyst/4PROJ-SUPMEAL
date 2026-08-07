@@ -9,6 +9,7 @@ import IconCookbook from "~/components/icons/IconCookbook.vue";
 import IconSearch from "~/components/icons/IconSearch.vue";
 import IconTag from "~/components/icons/IconTag.vue";
 import { useRecipeStore } from "~/stores/useRecipeStore";
+import { sumStepMinutes } from "~/composables/useRecipes";
 import { usePlanningStore } from "~/stores/usePlanningStore";
 import { useCookbookStore } from "~/stores/cookbooks/useCookbookStore";
 import {
@@ -115,8 +116,35 @@ const normalize = (value: string) => value.trim().toLowerCase();
 
 const filteredRecipes = computed(() => {
   const needle = normalize(quickFilter.value);
-  if (!needle) return recipeStore.recipes;
-  return recipeStore.recipes.filter((r) => normalize(r.title).includes(needle));
+  const f = recipeFilters.value;
+  return recipeStore.recipes.filter((recipe) => {
+    if (needle && !normalize(recipe.title).includes(needle)) return false;
+
+    if (f.prepTimeMin !== "" || f.prepTimeMax !== "") {
+      const prepMinutes = sumStepMinutes(recipe.steps);
+      if (f.prepTimeMin !== "" && prepMinutes < f.prepTimeMin) return false;
+      if (f.prepTimeMax !== "" && prepMinutes > f.prepTimeMax) return false;
+    }
+
+    if (f.cookingTimeMin !== "" || f.cookingTimeMax !== "") {
+      const cookingMinutes =
+        recipe.cooking_duration !== null
+          ? Number(recipe.cooking_duration)
+          : null;
+      if (
+        f.cookingTimeMin !== "" &&
+        (cookingMinutes === null || cookingMinutes < f.cookingTimeMin)
+      )
+        return false;
+      if (
+        f.cookingTimeMax !== "" &&
+        (cookingMinutes === null || cookingMinutes > f.cookingTimeMax)
+      )
+        return false;
+    }
+
+    return true;
+  });
 });
 
 const filteredPlannings = computed(() => {

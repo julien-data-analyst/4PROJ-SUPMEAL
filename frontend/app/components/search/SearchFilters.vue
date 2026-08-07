@@ -27,13 +27,15 @@ const fieldInputClasses =
   "w-full rounded-md border border-sup-border bg-sup-withe px-3 py-[9px] text-[13.5px] text-sup-very-gray focus:border-sup-dark-green focus:outline-none focus:ring-2 focus:ring-sup-light-green/30";
 const fieldLabelClasses =
   "mb-1.5 block text-[12.5px] font-semibold text-sup-very-gray";
+const rangeInputClasses =
+  "w-full min-w-0 rounded-md border border-sup-border bg-sup-withe px-3 py-[9px] text-[13.5px] text-sup-very-gray focus:border-sup-dark-green focus:outline-none focus:ring-2 focus:ring-sup-light-green/30";
 </script>
 
 <template>
   <div class="mb-4 rounded-[10px] border border-sup-border bg-sup-withe p-5">
     <div
       v-if="type === 'recipes'"
-      class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
       <div>
         <label :class="fieldLabelClasses" for="filter-recipe-name">Nom</label>
@@ -124,6 +126,46 @@ const fieldLabelClasses =
           <option value="favorite">Favorites uniquement</option>
           <option value="not_favorite">Non favorites</option>
         </select>
+      </div>
+      <div>
+        <label :class="fieldLabelClasses">Préparation (min)</label>
+        <div class="flex items-center gap-2">
+          <input
+            v-model.number="recipeFilters.prepTimeMin"
+            type="number"
+            min="0"
+            placeholder="Min"
+            :class="rangeInputClasses"
+          />
+          <span class="text-gray-400">-</span>
+          <input
+            v-model.number="recipeFilters.prepTimeMax"
+            type="number"
+            min="0"
+            placeholder="Max"
+            :class="rangeInputClasses"
+          />
+        </div>
+      </div>
+      <div>
+        <label :class="fieldLabelClasses">Cuisson (min)</label>
+        <div class="flex items-center gap-2">
+          <input
+            v-model.number="recipeFilters.cookingTimeMin"
+            type="number"
+            min="0"
+            placeholder="Min"
+            :class="rangeInputClasses"
+          />
+          <span class="text-gray-400">-</span>
+          <input
+            v-model.number="recipeFilters.cookingTimeMax"
+            type="number"
+            min="0"
+            placeholder="Max"
+            :class="rangeInputClasses"
+          />
+        </div>
       </div>
     </div>
 
