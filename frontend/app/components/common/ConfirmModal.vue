@@ -12,30 +12,42 @@ const props = withDefaults(
     cancelLabel?: string;
     variant?: "default" | "destructive";
     typedWord?: string;
+    // Label of a confirmation checkbox the user must tick before the confirm
+    // button unlocks - an alternative gate to `typedWord` for actions that
+    // just need acknowledgement rather than a typed match (e.g. exporting
+    // data in a raw, unencrypted format).
+    checkboxLabel?: string;
   }>(),
   {
     confirmLabel: "Confirmer",
     cancelLabel: "Annuler",
     variant: "default",
     typedWord: undefined,
+    checkboxLabel: undefined,
   },
 );
 const emit = defineEmits<{ close: []; confirm: [] }>();
 
 const confirmText = ref("");
+const checkboxChecked = ref(false);
 const isConfirming = ref(false);
 
 watch(
   () => props.open,
   (open) => {
-    if (open) confirmText.value = "";
+    if (open) {
+      confirmText.value = "";
+      checkboxChecked.value = false;
+    }
   },
 );
 
 const canConfirm = computed(
   () =>
-    !props.typedWord ||
-    confirmText.value.trim().toLowerCase() === props.typedWord.toLowerCase(),
+    (!props.typedWord ||
+      confirmText.value.trim().toLowerCase() ===
+        props.typedWord.toLowerCase()) &&
+    (!props.checkboxLabel || checkboxChecked.value),
 );
 
 const onConfirm = async () => {
@@ -97,6 +109,18 @@ const onConfirm = async () => {
               @keyup.enter="onConfirm"
             />
           </div>
+
+          <label
+            v-if="checkboxLabel"
+            class="mt-[14px] flex items-start gap-2 text-[12.5px] text-sup-very-gray"
+          >
+            <input
+              v-model="checkboxChecked"
+              type="checkbox"
+              class="mt-0.5 h-4 w-4 rounded border-sup-border accent-sup-dark-green"
+            />
+            <span>{{ checkboxLabel }}</span>
+          </label>
         </div>
 
         <div

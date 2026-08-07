@@ -59,6 +59,7 @@ class CookbookImportPlanningSerializer(serializers.Serializer):
     """One planning within a cookbook import payload."""
 
     name = serializers.CharField(max_length=255)
+    icon = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     meals = CookbookImportMealSerializer(many=True, required=False)
 
     def validate_meals(self, meals: list[dict]) -> list[dict]:
@@ -82,6 +83,7 @@ class CookbookImportSerializer(serializers.Serializer):
     """Validates one cookbook object from an import payload."""
 
     name = serializers.CharField(max_length=255)
+    icon = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     recipes = CookbookImportRecipeSerializer(many=True, required=False)
     plannings = CookbookImportPlanningSerializer(many=True, required=False)
 
@@ -102,8 +104,14 @@ class CookbookImportSerializer(serializers.Serializer):
 
 
 def _create_cookbook(data: dict, user) -> Cookbook:
+    # `icon` is only passed through when present in the payload, so a
+    # cookbook/planning imported without one still falls back to the
+    # model's own default icon (DEFAULT_COOKBOOK_ICON/DEFAULT_PLANNING_ICON)
+    # exactly like a normal (non-import) create would.
     cookbook = Cookbook.objects.create(  # pyright: ignore[reportAttributeAccessIssue]
-        name=data["name"], creator=user
+        name=data["name"],
+        creator=user,
+        **({"icon": data["icon"]} if "icon" in data else {}),
     )
 
     recipe_map: dict[int, Recipe] = {}
@@ -123,7 +131,10 @@ def _create_cookbook(data: dict, user) -> Cookbook:
 
     for planning_item in data.get("plannings", []):
         planning = Planning.objects.create(  # pyright: ignore[reportAttributeAccessIssue]
-            name=planning_item["name"], creator=user, cookbook=cookbook
+            name=planning_item["name"],
+            creator=user,
+            cookbook=cookbook,
+            **({"icon": planning_item["icon"]} if "icon" in planning_item else {}),
         )
         RecipePlanning.objects.bulk_create(  # pyright: ignore[reportAttributeAccessIssue]
             RecipePlanning(
