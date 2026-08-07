@@ -6,7 +6,11 @@ import IconTrash from "~/components/icons/IconTrash.vue";
 import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
 import { useRecipeView } from "~/composables/useRecipesEditView";
-import { formatNumber, duryToMinutes } from "~/composables/useRecipes";
+import {
+  formatNumber,
+  duryToMinutes,
+  capitalizeFirst,
+} from "~/composables/useRecipes";
 import { useGoBack } from "~/composables/useGoBack";
 
 definePageMeta({ layout: "app" });
@@ -22,6 +26,11 @@ const {
   canManage,
   totalPrepMinutes,
   cookbookName,
+  basePersons,
+  selectedPersons,
+  incrementPersons,
+  decrementPersons,
+  scaledQuantity,
   onToggleFavorite,
   confirmDelete,
   formatCookingDuration,
@@ -150,7 +159,7 @@ const {
             :key="tag.id"
             class="rounded-full bg-sup-light-green/15 px-[10px] py-[3px] text-[11px] font-semibold text-sup-dark-green"
           >
-            {{ tag.name }}
+            {{ capitalizeFirst(tag.name) }}
           </span>
         </div>
       </div>
@@ -158,9 +167,48 @@ const {
       <div class="rounded-[10px] border border-sup-border bg-sup-withe p-6">
         <div class="grid grid-cols-1 gap-8 sm:grid-cols-[220px_1fr]">
           <div>
-            <h2 class="mb-[10px] text-[17px] font-bold text-sup-dark-green">
-              Ingrédients
-            </h2>
+            <div class="mb-[10px] flex items-center justify-between gap-2">
+              <h2 class="text-[17px] font-bold text-sup-dark-green">
+                Ingrédients
+              </h2>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="flex h-6 w-6 items-center justify-center rounded-full border border-sup-border text-sup-very-gray hover:bg-sup-light-gray disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Moins de personnes"
+                  :disabled="selectedPersons <= 1"
+                  @click="decrementPersons"
+                >
+                  −
+                </button>
+                <span
+                  class="min-w-[70px] text-center text-[12px] text-gray-400"
+                >
+                  {{ selectedPersons }} pers.
+                </span>
+                <button
+                  type="button"
+                  class="flex h-6 w-6 items-center justify-center rounded-full border border-sup-border text-sup-very-gray hover:bg-sup-light-gray"
+                  title="Plus de personnes"
+                  @click="incrementPersons"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <p
+              v-if="selectedPersons !== basePersons"
+              class="-mt-1 mb-[10px] text-[11px] text-gray-400"
+            >
+              Quantités recalculées ·
+              <button
+                type="button"
+                class="font-semibold text-sup-dark-green hover:underline"
+                @click="selectedPersons = basePersons"
+              >
+                Revenir à {{ basePersons }} pers.
+              </button>
+            </p>
             <ul class="flex flex-col gap-2 text-[13.5px] text-sup-very-gray">
               <li
                 v-for="line in recipe.ingredients"
@@ -173,12 +221,9 @@ const {
                   class="h-6 w-6 rounded object-cover"
                 />
                 <span>
-                  {{ formatNumber(line.quantity)
+                  {{ formatNumber(scaledQuantity(line))
                   }}{{ line.unity ? ` ${line.unity}` : "" }}
                   {{ line.ingredient.name }}
-                  <span class="text-[11px] text-gray-400"
-                    >({{ formatNumber(line.person_numbers) }} pers.)</span
-                  >
                 </span>
               </li>
               <li

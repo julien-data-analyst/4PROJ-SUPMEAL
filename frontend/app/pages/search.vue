@@ -8,8 +8,10 @@ import IconCalendar from "~/components/icons/IconCalendar.vue";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
 import IconSearch from "~/components/icons/IconSearch.vue";
 import IconTag from "~/components/icons/IconTag.vue";
+import IconStar from "~/components/icons/IconStar.vue";
 import { useRecipeStore } from "~/stores/useRecipeStore";
-import { sumStepMinutes } from "~/composables/useRecipes";
+import { useCuisinePreferences } from "~/composables/useCuisinePreferences";
+import { sumStepMinutes, capitalizeFirst } from "~/composables/useRecipes";
 import { usePlanningStore } from "~/stores/usePlanningStore";
 import { useCookbookStore } from "~/stores/cookbooks/useCookbookStore";
 import {
@@ -32,6 +34,16 @@ const searchType = ref<SearchType>("recipes");
 const recipeFilters = ref(createRecipeFilters());
 const planningFilters = ref(createPlanningFilters());
 const cookbookFilters = ref(createCookbookFilters());
+
+const { preferences: cuisinePreferences } = useCuisinePreferences();
+
+// Applies the tags saved in Settings > Préférences culinaires as the
+// recipe-tags filter in one click, instead of typing/browsing them again.
+const applyCuisinePreferences = () => {
+  searchType.value = "recipes";
+  recipeFilters.value.tags = cuisinePreferences.value.join(", ");
+  runSearch();
+};
 
 const recipeStore = useRecipeStore();
 const planningStore = usePlanningStore();
@@ -251,6 +263,17 @@ const tabClasses = (key: SearchType) => [
         />
       </div>
 
+      <button
+        v-if="searchType === 'recipes' && cuisinePreferences.length"
+        type="button"
+        class="flex items-center gap-[6px] rounded-md border border-sup-border bg-sup-withe px-3 py-[9px] text-[13.5px] font-medium text-sup-very-gray hover:bg-sup-light-gray"
+        title="Filtrer avec les tags enregistrés dans Paramètres"
+        @click="applyCuisinePreferences"
+      >
+        <IconStar size="xs" />
+        Mes préférences culinaires
+      </button>
+
       <div v-if="searchType === 'recipes'" ref="tagsPanelRef" class="relative">
         <button
           type="button"
@@ -276,7 +299,7 @@ const tabClasses = (key: SearchType) => [
               class="rounded-full bg-sup-light-green/15 px-2.5 py-1 text-[11.5px] font-medium text-sup-dark-green hover:bg-sup-light-green/30"
               @click="addTagFilter(tag)"
             >
-              {{ tag }}
+              {{ capitalizeFirst(tag) }}
             </button>
           </div>
         </div>

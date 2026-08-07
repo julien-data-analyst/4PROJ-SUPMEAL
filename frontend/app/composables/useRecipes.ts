@@ -144,6 +144,13 @@ export function formatNumber(value: string | number): string {
   return Number.isInteger(num) ? String(num) : String(num).replace(".", ",");
 }
 
+// Tags are always stored/submitted lowercase (see TagsPanel.vue and
+// useRecipesEditView.ts's buildPayload) to avoid case-variant duplicates in
+// the shared tag catalogue - capitalize only here, for display.
+export function capitalizeFirst(text: string): string {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
@@ -293,8 +300,8 @@ export function sortFavoritesFirst(recipes: Recipe[]): Recipe[] {
 export function useRecipes() {
   const store = useRecipeStore();
 
-  const fetchMyRecipes = (search = "") =>
-    store.fetchRecipes({ in_cookbook: false, name: search || undefined });
+  const fetchMyRecipes = (search = "", page = 1) =>
+    store.fetchRecipes({ in_cookbook: false, name: search || undefined, page });
 
   const fetchRecentRecipes = async (limit = 3): Promise<void> => {
     await store.fetchRecipes({
