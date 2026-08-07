@@ -752,6 +752,8 @@ qu'il possède ou avec lequel il a été partagé.
 | `ingredients` | string | Noms et/ou ids d'ingrédients séparés par des virgules ; la recette doit contenir **tous** les ingrédients listés. |
 | `cookbook` | string | Correspondance partielle insensible à la casse sur le nom du cookbook. |
 | `in_cookbook` | boolean | `true` : uniquement les recettes rangées dans un cookbook. `false` : uniquement les recettes autonomes. |
+| `planning` | string | Correspondance partielle insensible à la casse sur le nom d'un planning dans lequel la recette est programmée. |
+| `in_planning` | boolean | `true` : uniquement les recettes programmées dans au moins un planning. `false` : uniquement celles qui ne le sont dans aucun. |
 | `favorite` | boolean | `true` : uniquement les recettes favorites de l'appelant. `false` : uniquement celles qui ne le sont pas. |
 | `shared_with_me` | boolean | `true` : uniquement les recettes rangées dans un cookbook partagé avec l'appelant (dont il n'est pas propriétaire). |
 | `prep_time_min` / `prep_time_max` | number | Bornes (en minutes) sur la somme des durées des étapes de la recette. |
@@ -1039,6 +1041,7 @@ l'appelant sur ce cookbook.
 | Nom | Type | Description |
 | --- | --- | --- |
 | `name` | string | Correspondance partielle insensible à la casse sur le nom du planning. |
+| `type` | string | Correspondance exacte sur le type du planning : `journalier` ou `hebdomadaire`. |
 | `cookbook` | string | Correspondance partielle insensible à la casse sur le nom du cookbook. |
 | `in_cookbook` | boolean | `true` : uniquement les plannings rangés dans un cookbook. `false` : uniquement les plannings autonomes. |
 | `shared_with_me` | boolean | `true` : uniquement les plannings dans un cookbook partagé avec l'appelant. |

@@ -3,6 +3,7 @@ import type { Recipe } from "~/stores/useRecipeStore";
 import { relativeTime, useRecipes } from "~/composables/useRecipes";
 import { useRecipeStore } from "~/stores/useRecipeStore";
 import { useToastStore } from "~/stores/useToastStore";
+import { useCookbookName } from "~/composables/useCookbooks";
 import IconBookmark from "~/components/icons/IconBookmark.vue";
 import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";
@@ -29,8 +30,12 @@ const props = withDefaults(
     // this card for a recipe already filed there, where moving it to a
     // *different* cookbook has no place in the UI.
     canReassignCookbook?: boolean;
+    // Hides the "..." options menu (Vue/Modifier/Cookbook/Supprimer)
+    // entirely - used by the search page, where results can come from
+    // cookbooks the caller has no role on at all.
+    showMenu?: boolean;
   }>(),
-  { canEdit: true, canManage: true, canReassignCookbook: true },
+  { canEdit: true, canManage: true, canReassignCookbook: true, showMenu: true },
 );
 
 const store = useRecipeStore();
@@ -52,6 +57,8 @@ const placeholderGradients = [
 const placeholderClass = computed(
   () => placeholderGradients[props.recipe.id % placeholderGradients.length],
 );
+
+const cookbookName = useCookbookName(() => props.recipe.cookbook);
 
 const isFavoriteBusy = ref(false);
 const menuOpen = ref(false);
@@ -145,7 +152,15 @@ const menuItemClasses =
             <IconChevron size="xs" :direction="tagsExpanded ? 'up' : 'down'" />
           </button>
         </span>
-        <span>{{ recipe.cookbook ? "Cookbook" : "Recette" }}</span>
+        <NuxtLink
+          v-if="recipe.cookbook"
+          :to="`/cookbooks/${recipe.cookbook}/view`"
+          class="relative z-10 max-w-[110px] truncate font-semibold text-sup-dark-green hover:underline"
+          @click.stop
+        >
+          {{ cookbookName || "Cookbook" }}
+        </NuxtLink>
+        <span v-else>Recette</span>
       </div>
 
       <div
@@ -177,7 +192,7 @@ const menuItemClasses =
     </button>
 
     <!-- Menu (haut-droite) -->
-    <div ref="menuRef" class="absolute right-2 top-2 z-10">
+    <div v-if="showMenu" ref="menuRef" class="absolute right-2 top-2 z-10">
       <button
         type="button"
         class="flex h-7 w-7 items-center justify-center rounded-full bg-sup-withe/90 text-sup-very-gray shadow-sm transition hover:bg-sup-withe"

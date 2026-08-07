@@ -95,6 +95,8 @@ export interface RecipeListParams {
   ingredients?: string;
   cookbook?: string;
   in_cookbook?: boolean;
+  planning?: string;
+  in_planning?: boolean;
   favorite?: boolean;
   shared_with_me?: boolean;
   page?: number;

@@ -26,8 +26,12 @@ const props = withDefaults(
     canEdit?: boolean;
     canManage?: boolean;
     canReassignCookbook?: boolean;
+    // Hides the "..." options menu entirely - used by the search page,
+    // where results can come from cookbooks the caller has no role on
+    // at all.
+    showMenu?: boolean;
   }>(),
-  { canEdit: true, canManage: true, canReassignCookbook: true },
+  { canEdit: true, canManage: true, canReassignCookbook: true, showMenu: true },
 );
 
 const store = usePlanningStore();
@@ -107,7 +111,7 @@ const menuItemClasses =
     </div>
 
     <!-- Menu (haut-droite) -->
-    <div ref="menuRef" class="absolute right-2 top-2 z-10">
+    <div v-if="showMenu" ref="menuRef" class="absolute right-2 top-2 z-10">
       <button
         type="button"
         class="flex h-7 w-7 items-center justify-center rounded-full bg-sup-withe/90 text-sup-very-gray shadow-sm transition hover:bg-sup-withe"
