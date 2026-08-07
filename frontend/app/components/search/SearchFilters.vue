@@ -11,10 +11,9 @@ import type {
   CookbookFilterState,
 } from "~/composables/useSearch";
 
-withDefaults(
-  defineProps<{ type: SearchType; showCookbookScope?: boolean }>(),
-  { showCookbookScope: true },
-);
+withDefaults(defineProps<{ type: SearchType; showCookbookScope?: boolean }>(), {
+  showCookbookScope: true,
+});
 
 const emit = defineEmits<{ search: []; reset: [] }>();
 
@@ -29,7 +28,8 @@ const cookbookFilters = defineModel<CookbookFilterState>("cookbookFilters", {
 });
 
 const recipeStore = useRecipeStore();
-const fetchTagOptions = (search: string) => recipeStore.fetchTags(search || undefined);
+const fetchTagOptions = (search: string) =>
+  recipeStore.fetchTags(search || undefined);
 const fetchIngredientOptions = (search: string) =>
   recipeStore.fetchIngredients(search || undefined);
 

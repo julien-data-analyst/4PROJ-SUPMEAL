@@ -25,9 +25,7 @@ watch(search, runSearch, { immediate: true });
 </script>
 
 <template>
-  <div
-    class="rounded-[10px] border border-sup-border bg-sup-withe p-6"
-  >
+  <div class="rounded-[10px] border border-sup-border bg-sup-withe p-6">
     <div
       class="mb-1 flex items-center gap-2 text-[14.5px] font-bold text-sup-very-gray"
     >
@@ -35,8 +33,8 @@ watch(search, runSearch, { immediate: true });
       Préférences culinaires
     </div>
     <p class="mb-3 text-[12.5px] text-gray-500">
-      Choisissez vos tags préférés - le bouton « Mes préférences culinaires »
-      de la page de recherche les applique en un clic.
+      Choisissez vos tags préférés - le bouton « Mes préférences culinaires » de
+      la page de recherche les applique en un clic.
     </p>
 
     <div class="mb-3 flex flex-wrap gap-1.5">
@@ -77,7 +75,11 @@ watch(search, runSearch, { immediate: true });
           @click="togglePreference(s.name)"
         >
           {{ capitalizeFirst(s.name) }}
-          <IconClose v-if="isPreferred(s.name)" size="xs" class="text-sup-red-error" />
+          <IconClose
+            v-if="isPreferred(s.name)"
+            size="xs"
+            class="text-sup-red-error"
+          />
           <IconPlus v-else size="xs" />
         </button>
       </li>

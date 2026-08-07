@@ -14,7 +14,9 @@ function readStored(userId: number): string[] {
   try {
     const raw = localStorage.getItem(storageKey(userId));
     const parsed: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter((t) => typeof t === "string") : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((t) => typeof t === "string")
+      : [];
   } catch {
     return [];
   }
