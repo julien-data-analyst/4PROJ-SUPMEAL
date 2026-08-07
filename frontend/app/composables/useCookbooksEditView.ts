@@ -6,6 +6,8 @@ import { usePlanningStore } from "~/stores/usePlanningStore";
 import { useToastStore } from "~/stores/useToastStore";
 import { useAuth } from "~/composables/useAuth";
 import { fileToDataUrl, isAllowedImageFile } from "~/composables/useRecipes";
+import { getCookbookRole, hasCookbookRank } from "~/composables/useCookbooks";
+import { useCookbookDiscussionContext } from "~/composables/useCookbookDiscussionContext";
 
 export interface DeleteCookbookOptions {
   keepRecipes: boolean;
@@ -49,6 +51,17 @@ export function useCookbookEditForm(props: {
 }) {
   const store = useCookbookStore();
   const toast = useToastStore();
+
+  // `store.currentCookbook` is a global singleton that otherwise keeps
+  // pointing at whatever cookbook was last viewed/edited until the fetch
+  // below resolves - cleared synchronously here so nothing reads a
+  // previous, unrelated cookbook's data in the meantime.
+  if (
+    props.mode === "create" ||
+    store.currentCookbook?.id !== props.cookbookId
+  ) {
+    store.currentCookbook = null;
+  }
 
   const name = ref("");
   const icon = ref<string | null>(null);
@@ -113,7 +126,10 @@ export function useCookbookEditForm(props: {
       if (props.mode === "create") {
         const cookbook = await store.createCookbook(payload);
         toast.success("Cookbook créé.");
-        await navigateTo(`/cookbooks/${cookbook.id}/view`);
+        // Replaces this "create" entry so "Retour" from the view page that
+        // follows lands on whatever page the user was on before creating
+        // the cookbook, not back onto a blank creation form.
+        await navigateTo(`/cookbooks/${cookbook.id}/view`, { replace: true });
       } else if (props.cookbookId) {
         await store.updateCookbook(props.cookbookId, payload);
         savedNotice.value = true;
@@ -173,10 +189,19 @@ export function useCookbookView(cookbookId: number) {
   const planningStore = usePlanningStore();
   const toast = useToastStore();
   const { user } = useAuth();
+  const discussionContext = useCookbookDiscussionContext();
+
+  // See the identical guard in useCookbookEditForm - the page's header
+  // action row (Modifier/Supprimer) checks `isOwner` before `isLoading`
+  // gates the rest of the page, so a stale cookbook here could otherwise
+  // flash the wrong owner's controls for an instant.
+  if (store.currentCookbook?.id !== cookbookId) {
+    store.currentCookbook = null;
+  }
 
   const isLoading = ref(true);
   const deleteModalOpen = ref(false);
-  const activeTab = ref<"recettes" | "planning">("recettes");
+  const activeTab = ref<"recettes" | "planning" | "membres">("recettes");
 
   const load = async () => {
     isLoading.value = true;
@@ -187,6 +212,7 @@ export function useCookbookView(cookbookId: number) {
       // those stores directly) stay in sync here for free.
       recipeStore.recipes = cookbook.recipes;
       planningStore.plannings = cookbook.plannings;
+      discussionContext.value = { cookbookId, default: { kind: "general" } };
     } finally {
       isLoading.value = false;
     }
@@ -197,6 +223,23 @@ export function useCookbookView(cookbookId: number) {
   const cookbook = computed(() => store.currentCookbook);
   const isOwner = computed(
     () => !!cookbook.value && cookbook.value.creator.id === user.value?.id,
+  );
+  const myRole = computed(() =>
+    cookbook.value ? getCookbookRole(cookbook.value, user.value?.id) : null,
+  );
+  // "creator" role and up can file new recipes/plannings into the cookbook
+  // (see the backend's `validate_cookbook` on both write serializers);
+  // below that (reader/commentator/editor), only viewing/editing existing
+  // content is allowed.
+  const canManageContent = computed(
+    () =>
+      !!cookbook.value &&
+      hasCookbookRank(cookbook.value, user.value?.id, "creator"),
+  );
+  const canEditContent = computed(
+    () =>
+      !!cookbook.value &&
+      hasCookbookRank(cookbook.value, user.value?.id, "editor"),
   );
 
   const confirmDelete = async (options: DeleteCookbookOptions) => {
@@ -225,6 +268,9 @@ export function useCookbookView(cookbookId: number) {
     activeTab,
     cookbook,
     isOwner,
+    myRole,
+    canManageContent,
+    canEditContent,
     recipes: computed(() => recipeStore.recipes),
     plannings: computed(() => planningStore.plannings),
     confirmDelete,

@@ -13,7 +13,25 @@ import IconChevron from "~/components/icons/IconChevron.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
 import AssignCookbookMenu from "~/components/cookbook/AssignCookbookMenu.vue";
 
-const props = defineProps<{ recipe: Recipe; to: string }>();
+const props = withDefaults(
+  defineProps<{
+    recipe: Recipe;
+    to: string;
+    // Gate the "Modifier"/"Cookbook"/"Supprimer" menu items for a shared
+    // cookbook's reader/commentator (canEdit=false) or editor (canManage=
+    // false) role - see cookbooks.permissions.CookbookItemPermission on the
+    // backend. Both default to true: the card's own creator (personal
+    // lists, or a cookbook's admin/creator) always has full rights.
+    canEdit?: boolean;
+    canManage?: boolean;
+    // Separately hides just the "Cookbook" (reassign) menu item, even when
+    // canManage allows deleting - a cookbook's own Recettes tab renders
+    // this card for a recipe already filed there, where moving it to a
+    // *different* cookbook has no place in the UI.
+    canReassignCookbook?: boolean;
+  }>(),
+  { canEdit: true, canManage: true, canReassignCookbook: true },
+);
 
 const store = useRecipeStore();
 const toast = useToastStore();
@@ -183,6 +201,7 @@ const menuItemClasses =
           Vue
         </NuxtLink>
         <NuxtLink
+          v-if="canEdit"
           :to="`/recipes/${recipe.id}/edit`"
           :class="menuItemClasses"
           @click="menuOpen = false"
@@ -191,6 +210,7 @@ const menuItemClasses =
           Modifier
         </NuxtLink>
         <button
+          v-if="canManage && canReassignCookbook"
           type="button"
           :class="menuItemClasses"
           @click.prevent="openCookbookMenu"
@@ -199,6 +219,7 @@ const menuItemClasses =
           Cookbook
         </button>
         <button
+          v-if="canManage"
           type="button"
           :class="[menuItemClasses, 'text-sup-red-error']"
           @click.prevent="openDeleteModal"

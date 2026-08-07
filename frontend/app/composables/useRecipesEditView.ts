@@ -3,7 +3,12 @@ import { useRecipeStore } from "~/stores/useRecipeStore";
 import type { RecipeWritePayload } from "~/stores/useRecipeStore";
 import { useToastStore } from "~/stores/useToastStore";
 import { useAuth } from "~/composables/useAuth";
-import { useCookbookName } from "~/composables/useCookbooks";
+import {
+  useCookbookName,
+  useCookbookRoleFor,
+  COOKBOOK_ROLE_RANK,
+} from "~/composables/useCookbooks";
+import { useCookbookDiscussionContext } from "~/composables/useCookbookDiscussionContext";
 import {
   emptyStepLine,
   fileToDataUrl,
@@ -31,6 +36,15 @@ export function useRecipeEditForm(props: {
   const store = useRecipeStore();
   const toast = useToastStore();
   const route = useRoute();
+
+  // `store.currentRecipe` is a global singleton that otherwise keeps
+  // pointing at whatever recipe was last viewed/edited until the fetch
+  // below resolves - cleared synchronously here (not just in onMounted)
+  // so the cookbookId/discussion-context watchers set up next never
+  // briefly compute against a previous, unrelated recipe's cookbook.
+  if (props.mode === "create" || store.currentRecipe?.id !== props.recipeId) {
+    store.currentRecipe = null;
+  }
 
   const title = ref("");
   const source = ref("");
@@ -64,6 +78,22 @@ export function useRecipeEditForm(props: {
     () => currentRecipe.value?.cookbook ?? cookbookIdParam.value,
   );
   const cookbookName = useCookbookName(() => cookbookId.value);
+
+  const discussionContext = useCookbookDiscussionContext();
+  watch(
+    [cookbookId, currentRecipe],
+    () => {
+      discussionContext.value = cookbookId.value
+        ? {
+            cookbookId: cookbookId.value,
+            default: currentRecipe.value
+              ? { kind: "recipe", id: currentRecipe.value.id }
+              : { kind: "general" },
+          }
+        : null;
+    },
+    { immediate: true },
+  );
 
   // Live counter - sum of every step's own duration only (cooking_duration
   // is a separate, user-entered field and isn't part of this estimate).
@@ -210,7 +240,10 @@ export function useRecipeEditForm(props: {
       if (props.mode === "create") {
         const recipe = await store.createRecipe(payload);
         toast.success("Recette créée.");
-        await navigateTo(`/recipes/${recipe.id}/edit`);
+        // Replaces this "create" entry so "Retour" from the edit page that
+        // follows lands on whatever page the user was on before creating
+        // the recipe, not back onto a blank creation form.
+        await navigateTo(`/recipes/${recipe.id}/edit`, { replace: true });
       } else if (props.recipeId) {
         await store.updateRecipe(props.recipeId, payload);
         savedNotice.value = true;
@@ -279,6 +312,12 @@ export function useRecipeView(recipeId: number) {
   const { toggleFavorite } = useRecipes();
   const { user } = useAuth();
 
+  // See the identical guard in useRecipeEditForm - avoids a stale
+  // previously-viewed recipe leaking into the computeds below.
+  if (store.currentRecipe?.id !== recipeId) {
+    store.currentRecipe = null;
+  }
+
   const isLoading = ref(true);
   const deleteModalOpen = ref(false);
 
@@ -299,6 +338,33 @@ export function useRecipeView(recipeId: number) {
     recipe.value ? sumStepMinutes(recipe.value.steps) : 0,
   );
   const cookbookName = useCookbookName(() => recipe.value?.cookbook ?? null);
+  const cookbookRole = useCookbookRoleFor(() => recipe.value?.cookbook ?? null);
+
+  const discussionContext = useCookbookDiscussionContext();
+  watch(
+    recipe,
+    (r) => {
+      discussionContext.value = r?.cookbook
+        ? { cookbookId: r.cookbook, default: { kind: "recipe", id: r.id } }
+        : null;
+    },
+    { immediate: true },
+  );
+  // A shared cookbook member who didn't create this recipe can still edit
+  // (editor rank+) or delete (creator rank+) it - mirrors the backend's
+  // CookbookItemPermission.
+  const canEdit = computed(
+    () =>
+      isOwner.value ||
+      (!!cookbookRole.value &&
+        COOKBOOK_ROLE_RANK[cookbookRole.value] >= COOKBOOK_ROLE_RANK.editor),
+  );
+  const canManage = computed(
+    () =>
+      isOwner.value ||
+      (!!cookbookRole.value &&
+        COOKBOOK_ROLE_RANK[cookbookRole.value] >= COOKBOOK_ROLE_RANK.creator),
+  );
 
   const onToggleFavorite = async () => {
     if (!recipe.value) return;
@@ -330,6 +396,8 @@ export function useRecipeView(recipeId: number) {
     deleteModalOpen,
     recipe,
     isOwner,
+    canEdit,
+    canManage,
     totalPrepMinutes,
     cookbookName,
     onToggleFavorite,
