@@ -12,7 +12,15 @@ import IconEdit from "~/components/icons/IconEdit.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
 import DeleteCookbookModal from "~/components/cookbook/DeleteCookbookModal.vue";
 
-const props = defineProps<{ cookbook: Cookbook; to: string }>();
+const props = withDefaults(
+  defineProps<{
+    cookbook: Cookbook;
+    to: string;
+    // Hides the "..." options menu entirely - used by the search page.
+    showMenu?: boolean;
+  }>(),
+  { showMenu: true },
+);
 
 // Mirrors RecipeCard's .ph-a..ph-g placeholder gradients, used whenever the
 // cookbook has no uploaded icon.
@@ -97,7 +105,7 @@ const menuItemClasses =
     </div>
 
     <!-- Menu (haut-droite) -->
-    <div ref="menuRef" class="absolute right-2 top-2 z-10">
+    <div v-if="showMenu" ref="menuRef" class="absolute right-2 top-2 z-10">
       <button
         type="button"
         class="flex h-7 w-7 items-center justify-center rounded-full bg-sup-withe/90 text-sup-very-gray shadow-sm transition hover:bg-sup-withe"
