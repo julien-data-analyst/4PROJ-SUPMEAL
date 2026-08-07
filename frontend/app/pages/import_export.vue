@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { useRecipeStore } from "~/stores/useRecipeStore";
-import { useCookbookStore } from "~/stores/cookbooks/useCookbookStore";
+import { useApi } from "~/composables/useAPI";
+import { fetchAllPages } from "~/composables/usePagination";
 import { useImportExport } from "~/composables/useImportExport";
 import type { SelectableItem } from "~/composables/useImportExport";
+import type { Recipe } from "~/stores/useRecipeStore";
+import type { Cookbook } from "~/stores/cookbooks/useCookbookStore";
 import ExportSelectionList from "~/components/import_export/ExportSelectionList.vue";
 import ImportDropzone from "~/components/import_export/ImportDropzone.vue";
 import ConfirmModal from "~/components/common/ConfirmModal.vue";
@@ -11,8 +13,12 @@ import IconCookbook from "~/components/icons/IconCookbook.vue";
 
 definePageMeta({ layout: "app" });
 
-const recipeStore = useRecipeStore();
-const cookbookStore = useCookbookStore();
+interface PaginatedResponse<T> {
+  results: T[];
+  total_pages: number;
+}
+
+const { get } = useApi();
 const {
   store: importExportStore,
   exportRecipes,
@@ -24,27 +30,58 @@ const {
 const recipeDropzone = ref<InstanceType<typeof ImportDropzone> | null>(null);
 const cookbookDropzone = ref<InstanceType<typeof ImportDropzone> | null>(null);
 
+// Kept as page-local lists (not the shared recipe/cookbook stores) so this
+// page can walk every page of results without clobbering what other pages
+// expect to find in those stores - see `fetchAllPages`, which exists
+// specifically because the backend caps `page_size` at 100, so a single
+// fetch could silently leave recipes/cookbooks out of the export selection.
+const allRecipes = ref<Recipe[]>([]);
+const allCookbooks = ref<Cookbook[]>([]);
+const recipesLoading = ref(true);
+const cookbooksLoading = ref(true);
+
 // Only your own personal recipes (not filed into any cookbook) are
 // exportable - mirrors GET /api/recipes/export/'s own filter, so nothing
 // shown here can 404 once selected.
 const recipeItems = computed<SelectableItem[]>(() =>
-  recipeStore.recipes.map((recipe) => ({ id: recipe.id, title: recipe.title })),
+  allRecipes.value.map((recipe) => ({ id: recipe.id, title: recipe.title })),
 );
 
 // Only the cookbooks you created are exportable - mirrors
 // GET /api/cookbooks/export/'s own filter.
 const cookbookItems = computed<SelectableItem[]>(() =>
-  cookbookStore.cookbooks.map((cookbook) => ({
+  allCookbooks.value.map((cookbook) => ({
     id: cookbook.id,
     title: cookbook.name,
     subtitle: `${cookbook.recipes.length} recette${cookbook.recipes.length > 1 ? "s" : ""}`,
   })),
 );
 
-const loadRecipes = () =>
-  recipeStore.fetchRecipes({ in_cookbook: false, page_size: 100 });
-const loadCookbooks = () =>
-  cookbookStore.fetchCookbooks({ shared_with_me: false, page_size: 100 });
+const loadRecipes = async () => {
+  recipesLoading.value = true;
+  try {
+    allRecipes.value = await fetchAllPages((page) =>
+      get<PaginatedResponse<Recipe>>(
+        `/recipes/?in_cookbook=false&page_size=100&page=${page}`,
+      ),
+    );
+  } finally {
+    recipesLoading.value = false;
+  }
+};
+
+const loadCookbooks = async () => {
+  cookbooksLoading.value = true;
+  try {
+    allCookbooks.value = await fetchAllPages((page) =>
+      get<PaginatedResponse<Cookbook>>(
+        `/cookbooks/?shared_with_me=false&page_size=100&page=${page}`,
+      ),
+    );
+  } finally {
+    cookbooksLoading.value = false;
+  }
+};
 
 onMounted(() => {
   loadRecipes();
@@ -111,7 +148,7 @@ const onImportCookbooks = async (file: File) => {
         </h3>
         <ExportSelectionList
           :items="recipeItems"
-          :loading="recipeStore.loading"
+          :loading="recipesLoading"
           :exporting="importExportStore.exportingRecipes"
           empty-label="Aucune recette personnelle à exporter."
           @export="askExportRecipes"
@@ -143,7 +180,7 @@ const onImportCookbooks = async (file: File) => {
         </h3>
         <ExportSelectionList
           :items="cookbookItems"
-          :loading="cookbookStore.loading"
+          :loading="cookbooksLoading"
           :exporting="importExportStore.exportingCookbooks"
           empty-label="Aucun cookbook créé par vous à exporter."
           @export="askExportCookbooks"

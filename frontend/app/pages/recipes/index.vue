@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppButton from "~/components/buttons/AppButton.vue";
 import RecipeCard from "~/components/recipes/RecipeCard.vue";
+import Pagination from "~/components/common/Pagination.vue";
 import IconPlus from "~/components/icons/IconPlus.vue";
 import IconSearch from "~/components/icons/IconSearch.vue";
 import { useRecipes, sortFavoritesFirst } from "~/composables/useRecipes";
@@ -10,13 +11,14 @@ definePageMeta({ layout: "app" });
 const { store, fetchMyRecipes } = useRecipes();
 
 const search = ref("");
+const currentPage = ref(1);
 const isLoading = ref(true);
 let debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
 const load = async () => {
   isLoading.value = true;
   try {
-    await fetchMyRecipes(search.value);
+    await fetchMyRecipes(search.value, currentPage.value);
   } finally {
     isLoading.value = false;
   }
@@ -25,9 +27,12 @@ const load = async () => {
 onMounted(load);
 
 watch(search, () => {
+  currentPage.value = 1;
   if (debounceHandle) clearTimeout(debounceHandle);
   debounceHandle = setTimeout(load, 300);
 });
+
+watch(currentPage, load);
 
 const sortedRecipes = computed(() => sortFavoritesFirst(store.recipes));
 </script>
@@ -93,5 +98,12 @@ const sortedRecipes = computed(() => sortFavoritesFirst(store.recipes));
     >
       Aucune recette ne correspond à votre recherche.
     </div>
+
+    <Pagination
+      v-if="!isLoading"
+      v-model:current-page="currentPage"
+      :total-pages="store.pagination.total_pages"
+      class="mt-5"
+    />
   </div>
 </template>

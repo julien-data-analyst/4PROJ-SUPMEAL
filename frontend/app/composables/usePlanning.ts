@@ -119,8 +119,12 @@ export function mealsByDayAndSlot(
 export function usePlanning() {
   const store = usePlanningStore();
 
-  const fetchMyPlannings = (search = "") =>
-    store.fetchPlannings({ in_cookbook: false, name: search || undefined });
+  const fetchMyPlannings = (search = "", page = 1) =>
+    store.fetchPlannings({
+      in_cookbook: false,
+      name: search || undefined,
+      page,
+    });
 
   const fetchRecentPlannings = async (limit = 3): Promise<void> => {
     await store.fetchPlannings({

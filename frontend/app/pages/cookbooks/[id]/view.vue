@@ -3,6 +3,8 @@ import AppButton from "~/components/buttons/AppButton.vue";
 import RecipeCard from "~/components/recipes/RecipeCard.vue";
 import PlanningCard from "~/components/planning/PlanningCard.vue";
 import CookbookMembersPanel from "~/components/cookbook/CookbookMembersPanel.vue";
+import SearchFilters from "~/components/search/SearchFilters.vue";
+import Pagination from "~/components/common/Pagination.vue";
 import IconChevronLeft from "~/components/icons/IconChevronLeft.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
 import IconPlus from "~/components/icons/IconPlus.vue";
@@ -11,6 +13,13 @@ import DeleteCookbookModal from "~/components/cookbook/DeleteCookbookModal.vue";
 import { useCookbookView } from "~/composables/useCookbooksEditView";
 import { useGoBack } from "~/composables/useGoBack";
 import { COOKBOOK_ROLE_LABELS } from "~/composables/useCookbooks";
+import {
+  createRecipeFilters,
+  createPlanningFilters,
+  createCookbookFilters,
+  filterRecipesLocally,
+  filterPlanningsLocally,
+} from "~/composables/useSearch";
 
 definePageMeta({ layout: "app" });
 
@@ -36,6 +45,72 @@ const tabs = [
   { key: "planning" as const, label: "Planning" },
   { key: "membres" as const, label: "Membres" },
 ];
+
+// Reuses the exact same filter block as the general search page (see
+// `~/pages/search.vue`), scoped to this one cookbook's already-loaded
+// `recipes`/`plannings` (no backend call - everything's filtered
+// client-side, see `filterRecipesLocally`/`filterPlanningsLocally`).
+// `cookbookFilters` is unused (the "Cookbook" scope field is hidden via
+// `show-cookbook-scope="false"`, meaningless once already inside one) but
+// still required to satisfy <SearchFilters>'s model contract.
+//
+// `recipeFilters`/`planningFilters` are the draft values bound to the
+// inputs; `appliedRecipeFilters`/`appliedPlanningFilters` are what the list
+// is actually filtered by - only synced from the draft on "Rechercher"
+// (@search), matching the general search page's click-to-apply behaviour
+// instead of filtering on every keystroke.
+const recipeFilters = ref(createRecipeFilters());
+const planningFilters = ref(createPlanningFilters());
+const cookbookFilters = ref(createCookbookFilters());
+const appliedRecipeFilters = ref(createRecipeFilters());
+const appliedPlanningFilters = ref(createPlanningFilters());
+
+const RECIPES_PAGE_SIZE = 8;
+const PLANNINGS_PAGE_SIZE = 6;
+const recipePage = ref(1);
+const planningPage = ref(1);
+
+const filteredRecipes = computed(() =>
+  filterRecipesLocally(recipes.value, appliedRecipeFilters.value),
+);
+const recipeTotalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredRecipes.value.length / RECIPES_PAGE_SIZE)),
+);
+const pagedRecipes = computed(() => {
+  const start = (recipePage.value - 1) * RECIPES_PAGE_SIZE;
+  return filteredRecipes.value.slice(start, start + RECIPES_PAGE_SIZE);
+});
+
+const filteredPlannings = computed(() =>
+  filterPlanningsLocally(plannings.value, appliedPlanningFilters.value),
+);
+const planningTotalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredPlannings.value.length / PLANNINGS_PAGE_SIZE)),
+);
+const pagedPlannings = computed(() => {
+  const start = (planningPage.value - 1) * PLANNINGS_PAGE_SIZE;
+  return filteredPlannings.value.slice(start, start + PLANNINGS_PAGE_SIZE);
+});
+
+const applyRecipeFilters = () => {
+  appliedRecipeFilters.value = { ...recipeFilters.value };
+  recipePage.value = 1;
+};
+const applyPlanningFilters = () => {
+  appliedPlanningFilters.value = { ...planningFilters.value };
+  planningPage.value = 1;
+};
+
+const resetRecipeFilters = () => {
+  recipeFilters.value = createRecipeFilters();
+  appliedRecipeFilters.value = createRecipeFilters();
+  recipePage.value = 1;
+};
+const resetPlanningFilters = () => {
+  planningFilters.value = createPlanningFilters();
+  appliedPlanningFilters.value = createPlanningFilters();
+  planningPage.value = 1;
+};
 
 const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
   "border-b-2 px-1 pb-[10px] text-[13.5px] font-semibold transition",
@@ -150,12 +225,23 @@ const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
           </AppButton>
         </div>
 
-        <div
+        <SearchFilters
           v-if="recipes.length"
+          v-model:recipe-filters="recipeFilters"
+          v-model:planning-filters="planningFilters"
+          v-model:cookbook-filters="cookbookFilters"
+          type="recipes"
+          :show-cookbook-scope="false"
+          @search="applyRecipeFilters"
+          @reset="resetRecipeFilters"
+        />
+
+        <div
+          v-if="pagedRecipes.length"
           class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4"
         >
           <RecipeCard
-            v-for="recipe in recipes"
+            v-for="recipe in pagedRecipes"
             :key="recipe.id"
             :recipe="recipe"
             :to="`/recipes/${recipe.id}/view`"
@@ -168,8 +254,18 @@ const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
           v-else
           class="rounded-[10px] border border-dashed border-sup-border bg-sup-withe p-10 text-center text-[13px] text-gray-400"
         >
-          Aucune recette dans ce cookbook pour le moment.
+          {{
+            recipes.length
+              ? "Aucune recette ne correspond à ces filtres."
+              : "Aucune recette dans ce cookbook pour le moment."
+          }}
         </div>
+
+        <Pagination
+          v-model:current-page="recipePage"
+          :total-pages="recipeTotalPages"
+          class="mt-5"
+        />
       </section>
 
       <section v-else-if="activeTab === 'planning'">
@@ -186,12 +282,23 @@ const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
           </AppButton>
         </div>
 
-        <div
+        <SearchFilters
           v-if="plannings.length"
+          v-model:recipe-filters="recipeFilters"
+          v-model:planning-filters="planningFilters"
+          v-model:cookbook-filters="cookbookFilters"
+          type="plannings"
+          :show-cookbook-scope="false"
+          @search="applyPlanningFilters"
+          @reset="resetPlanningFilters"
+        />
+
+        <div
+          v-if="pagedPlannings.length"
           class="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4"
         >
           <PlanningCard
-            v-for="planning in plannings"
+            v-for="planning in pagedPlannings"
             :key="planning.id"
             :planning="planning"
             :to="`/planning/${planning.id}/view`"
@@ -204,8 +311,18 @@ const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
           v-else
           class="rounded-[10px] border border-dashed border-sup-border bg-sup-withe p-10 text-center text-[13px] text-gray-400"
         >
-          Aucun planning dans ce cookbook pour le moment.
+          {{
+            plannings.length
+              ? "Aucun planning ne correspond à ces filtres."
+              : "Aucun planning dans ce cookbook pour le moment."
+          }}
         </div>
+
+        <Pagination
+          v-model:current-page="planningPage"
+          :total-pages="planningTotalPages"
+          class="mt-5"
+        />
       </section>
 
       <section v-else>

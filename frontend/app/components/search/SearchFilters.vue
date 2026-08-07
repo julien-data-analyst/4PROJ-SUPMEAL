@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import AppButton from "~/components/buttons/AppButton.vue";
 import IconSearch from "~/components/icons/IconSearch.vue";
+import CatalogMultiSelect from "~/components/search/CatalogMultiSelect.vue";
 import { PLANNING_TYPE_LABELS } from "~/composables/usePlanning";
+import { useRecipeStore } from "~/stores/useRecipeStore";
 import type {
   SearchType,
   RecipeFilterState,
@@ -9,7 +11,9 @@ import type {
   CookbookFilterState,
 } from "~/composables/useSearch";
 
-defineProps<{ type: SearchType }>();
+withDefaults(defineProps<{ type: SearchType; showCookbookScope?: boolean }>(), {
+  showCookbookScope: true,
+});
 
 const emit = defineEmits<{ search: []; reset: [] }>();
 
@@ -22,6 +26,12 @@ const planningFilters = defineModel<PlanningFilterState>("planningFilters", {
 const cookbookFilters = defineModel<CookbookFilterState>("cookbookFilters", {
   required: true,
 });
+
+const recipeStore = useRecipeStore();
+const fetchTagOptions = (search: string) =>
+  recipeStore.fetchTags(search || undefined);
+const fetchIngredientOptions = (search: string) =>
+  recipeStore.fetchIngredients(search || undefined);
 
 const fieldInputClasses =
   "w-full rounded-md border border-sup-border bg-sup-withe px-3 py-[9px] text-[13.5px] text-sup-very-gray focus:border-sup-dark-green focus:outline-none focus:ring-2 focus:ring-sup-light-green/30";
@@ -48,28 +58,25 @@ const rangeInputClasses =
         />
       </div>
       <div>
-        <label :class="fieldLabelClasses" for="filter-recipe-ingredients">
-          Ingrédients
-        </label>
-        <input
-          id="filter-recipe-ingredients"
+        <CatalogMultiSelect
           v-model="recipeFilters.ingredients"
-          type="text"
-          placeholder="Farine, Oeuf..."
-          :class="fieldInputClasses"
+          label="Ingrédients"
+          search-placeholder="Rechercher un ingrédient..."
+          empty-label="Aucun ingrédient."
+          :fetch-options="fetchIngredientOptions"
         />
       </div>
       <div>
-        <label :class="fieldLabelClasses" for="filter-recipe-tags">Tags</label>
-        <input
-          id="filter-recipe-tags"
+        <CatalogMultiSelect
           v-model="recipeFilters.tags"
-          type="text"
-          placeholder="Vegan, Rapide..."
-          :class="fieldInputClasses"
+          label="Tags"
+          search-placeholder="Rechercher un tag..."
+          empty-label="Aucun tag."
+          capitalize-labels
+          :fetch-options="fetchTagOptions"
         />
       </div>
-      <div>
+      <div v-if="showCookbookScope">
         <label :class="fieldLabelClasses" for="filter-recipe-cookbook-scope">
           Cookbook
         </label>
@@ -203,7 +210,7 @@ const rangeInputClasses =
           </option>
         </select>
       </div>
-      <div>
+      <div v-if="showCookbookScope">
         <label :class="fieldLabelClasses" for="filter-planning-cookbook-scope">
           Cookbook
         </label>

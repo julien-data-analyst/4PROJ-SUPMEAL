@@ -1,4 +1,5 @@
 from django.db import models, transaction
+from django.db.models import Exists, OuterRef, Prefetch
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -14,6 +15,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from config.pagination import DefaultPagination
+from recipes.models import FavoriteRecipe, Recipe
 
 from .export import CookbookExportSerializer, export_cookbook, export_cookbooks
 from .filters import CookbookFilter
@@ -304,6 +306,19 @@ class CookbookViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         user = self.request.user
+        # Both `recipes` and `plannings[].meals[].recipe` are serialized with
+        # `RecipeSerializer`, which includes `is_favorite` - annotate it here
+        # too (mirrors RecipeViewSet.get_queryset), otherwise it silently
+        # defaults to `False` regardless of the caller's real favorites
+        # (DRF's `BooleanField(default=False)` swallows the missing-attribute
+        # error that a non-annotated instance would otherwise raise).
+        favorited_recipes = Recipe.objects.annotate(  # pyright: ignore[reportAttributeAccessIssue]
+            is_favorite=Exists(
+                FavoriteRecipe.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
+                    user=user, recipe=OuterRef("pk")
+                )
+            )
+        ).select_related("creator")
         return (
             Cookbook.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
                 models.Q(creator=user) | models.Q(shared_with__user=user)
@@ -311,15 +326,19 @@ class CookbookViewSet(viewsets.ModelViewSet):
             .select_related("creator")
             .prefetch_related(
                 "shared_with__user",
-                "recipes__creator",
-                "recipes__recipe_ingredients__ingredient",
-                "recipes__recipe_tags__tag",
-                "recipes__steps",
+                Prefetch(
+                    "recipes",
+                    queryset=favorited_recipes.prefetch_related(
+                        "recipe_ingredients__ingredient", "recipe_tags__tag", "steps"
+                    ),
+                ),
                 "plannings__creator",
-                "plannings__recipe_plannings__recipe__creator",
-                "plannings__recipe_plannings__recipe__recipe_ingredients__ingredient",
-                "plannings__recipe_plannings__recipe__recipe_tags__tag",
-                "plannings__recipe_plannings__recipe__steps",
+                Prefetch(
+                    "plannings__recipe_plannings__recipe",
+                    queryset=favorited_recipes.prefetch_related(
+                        "recipe_ingredients__ingredient", "recipe_tags__tag", "steps"
+                    ),
+                ),
             )
             .distinct()
             .order_by("-updated_at")
