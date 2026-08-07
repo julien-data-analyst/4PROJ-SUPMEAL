@@ -76,6 +76,30 @@ def test_export_list_excludes_callers_recipes_filed_into_a_cookbook(
     assert titles == ["Existing Recipe"]
 
 
+def test_export_list_filters_by_ids(
+    auth_client: APIClient, owned_recipe: Recipe, regular_user: User
+):
+    other_owned_recipe = Recipe(title="Second Recipe", creator=regular_user)
+    other_owned_recipe.save()
+    url = reverse("recipe-export-list")
+
+    response = auth_client.get(url, {"ids": str(owned_recipe.pk)})
+
+    titles = [item["title"] for item in response.data]  # pyright: ignore[reportOptionalIterable]
+    assert titles == ["Existing Recipe"]
+
+
+def test_export_list_ignores_ids_not_owned_by_caller(
+    auth_client: APIClient, owned_recipe: Recipe, other_users_private_recipe: Recipe
+):
+    url = reverse("recipe-export-list")
+
+    response = auth_client.get(url, {"ids": f"{owned_recipe.pk},{other_users_private_recipe.pk}"})
+
+    titles = [item["title"] for item in response.data]  # pyright: ignore[reportOptionalIterable]
+    assert titles == ["Existing Recipe"]
+
+
 #######################################-
 # Tests for POST /api/recipes/import/
 #######################################-

@@ -2,8 +2,8 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from cookbooks.models import Cookbook
-from planning.models import Planning, RecipePlanning
+from cookbooks.models import DEFAULT_COOKBOOK_ICON, Cookbook
+from planning.models import DEFAULT_PLANNING_ICON, Planning, RecipePlanning
 from recipes.models import Recipe
 from tests.import_export.conftest import APIClient
 from users.models import User
@@ -42,6 +42,21 @@ def test_export_detail_returns_recipes_with_link_id_and_plannings_referencing_it
         "dayofweek": "lundi",
     }
     assert response["Content-Disposition"] == f'attachment; filename="cookbook_{cookbook.pk}.json"'
+
+
+def test_export_detail_includes_cookbook_and_planning_icon(
+    auth_client: APIClient, owned_cookbook_with_recipe_and_planning: Cookbook
+):
+    cookbook = owned_cookbook_with_recipe_and_planning
+    url = reverse("cookbook-export-detail", kwargs={"pk": cookbook.pk})
+
+    response = auth_client.get(url)
+
+    assert response.data["icon"] == DEFAULT_COOKBOOK_ICON  # pyright: ignore[reportOptionalSubscript]
+    assert (
+        response.data["plannings"][0]["icon"]  # pyright: ignore[reportOptionalSubscript]
+        == DEFAULT_PLANNING_ICON
+    )
 
 
 def test_export_detail_drops_meals_scheduling_a_recipe_outside_the_cookbook(
@@ -105,6 +120,21 @@ def test_export_list_only_returns_cookbooks_created_by_caller(
     assert names == ["Mon carnet"]
 
 
+def test_export_list_filters_by_ids(
+    auth_client: APIClient,
+    owned_cookbook_with_recipe_and_planning: Cookbook,
+    regular_user: User,
+):
+    other_cookbook = Cookbook(name="Autre carnet", creator=regular_user)
+    other_cookbook.save()
+    url = reverse("cookbook-export-list")
+
+    response = auth_client.get(url, {"ids": str(owned_cookbook_with_recipe_and_planning.pk)})
+
+    names = [item["name"] for item in response.data]  # pyright: ignore[reportOptionalIterable]
+    assert names == ["Mon carnet"]
+
+
 #########################################-
 # Tests for POST /api/cookbooks/import/
 #########################################-
@@ -132,6 +162,39 @@ def test_import_single_cookbook_creates_cookbook_recipe_and_planning(
     assert recipe.creator_id == regular_user.pk
     meal = planning.recipe_plannings.first()  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
     assert meal.recipe_id == recipe.pk
+
+
+def test_import_uses_provided_cookbook_and_planning_icon(
+    auth_client: APIClient, cookbook_export_payload: dict
+):
+    cookbook_export_payload["icon"] = "data:image/png;base64,AAAA"
+    cookbook_export_payload["plannings"][0]["icon"] = "data:image/png;base64,BBBB"
+    url = reverse("cookbook-import-data")
+
+    response = auth_client.post(url, cookbook_export_payload, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    created = response.data[0]  # pyright: ignore[reportOptionalSubscript]
+    cookbook = Cookbook.objects.get(pk=created["id"])  # pyright: ignore[reportAttributeAccessIssue]
+    planning = cookbook.plannings.first()  # pyright: ignore[reportAttributeAccessIssue]
+    assert cookbook.icon == "data:image/png;base64,AAAA"
+    assert planning is not None and planning.icon == "data:image/png;base64,BBBB"
+
+
+def test_import_falls_back_to_default_icon_when_omitted(
+    auth_client: APIClient, cookbook_export_payload: dict
+):
+    assert "icon" not in cookbook_export_payload
+    url = reverse("cookbook-import-data")
+
+    response = auth_client.post(url, cookbook_export_payload, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    created = response.data[0]  # pyright: ignore[reportOptionalSubscript]
+    cookbook = Cookbook.objects.get(pk=created["id"])  # pyright: ignore[reportAttributeAccessIssue]
+    planning = cookbook.plannings.first()  # pyright: ignore[reportAttributeAccessIssue]
+    assert cookbook.icon == DEFAULT_COOKBOOK_ICON
+    assert planning is not None and planning.icon == DEFAULT_PLANNING_ICON
 
 
 def test_import_array_of_cookbooks_creates_all_of_them(
