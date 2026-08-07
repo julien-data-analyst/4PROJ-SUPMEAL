@@ -43,6 +43,10 @@ class RecipeFilter(django_filters.FilterSet):
     ingredients = django_filters.CharFilter(method="filter_ingredients")
     cookbook = django_filters.CharFilter(field_name="cookbook__name", lookup_expr="icontains")
     in_cookbook = django_filters.BooleanFilter(method="filter_in_cookbook")
+    planning = django_filters.CharFilter(
+        field_name="recipe_plannings__planning__name", lookup_expr="icontains"
+    )
+    in_planning = django_filters.BooleanFilter(method="filter_in_planning")
     favorite = django_filters.BooleanFilter(method="filter_favorite")
     shared_with_me = django_filters.BooleanFilter(method="filter_shared_with_me")
     prep_time_min = django_filters.NumberFilter(method="filter_prep_time_min")
@@ -86,6 +90,11 @@ class RecipeFilter(django_filters.FilterSet):
 
     def filter_in_cookbook(self, queryset: QuerySet, name: str, value: bool) -> QuerySet:
         return queryset.filter(cookbook__isnull=not value)
+
+    def filter_in_planning(self, queryset: QuerySet, name: str, value: bool) -> QuerySet:
+        if value:
+            return queryset.filter(recipe_plannings__isnull=False)
+        return queryset.filter(recipe_plannings__isnull=True)
 
     def filter_favorite(self, queryset: QuerySet, name: str, value: bool) -> QuerySet:
         user = self.request.user  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]

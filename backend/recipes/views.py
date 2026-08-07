@@ -175,6 +175,22 @@ RECIPE_EXPORT_EXAMPLE = {
                 examples=[OpenApiExample("Exemple", value=True)],
             ),
             OpenApiParameter(
+                name="planning",
+                type=OpenApiTypes.STR,
+                description="Filtre par nom de planning dans lequel la recette est "
+                "programmee (recherche partielle, insensible a la casse).",
+                examples=[OpenApiExample("Exemple", value="Semaine du 20 juillet")],
+            ),
+            OpenApiParameter(
+                name="in_planning",
+                type=OpenApiTypes.BOOL,
+                description=(
+                    "`true` : uniquement les recettes programmees dans au moins un "
+                    "planning. `false` : uniquement celles qui ne le sont dans aucun."
+                ),
+                examples=[OpenApiExample("Exemple", value=True)],
+            ),
+            OpenApiParameter(
                 name="favorite",
                 type=OpenApiTypes.BOOL,
                 description=(

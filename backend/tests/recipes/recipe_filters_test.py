@@ -5,6 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from cookbooks.models import Cookbook
+from planning.models import Planning, RecipePlanning
 from recipes.models import (
     FavoriteRecipe,
     Ingredient,
@@ -67,6 +68,14 @@ def _add_ingredient(recipe: Recipe, name: str) -> Ingredient:
 
 def _titles(response) -> list[str]:
     return [recipe["title"] for recipe in response.data["results"]]
+
+
+def _schedule_in_planning(
+    recipe: Recipe, planning: Planning, dayofweek: str = "lundi"
+) -> RecipePlanning:
+    return RecipePlanning.objects.create(  # pyright: ignore[reportAttributeAccessIssue]
+        recipe=recipe, planning=planning, type="plat", lunch="midi", dayofweek=dayofweek
+    )
 
 
 ###########################-
@@ -265,6 +274,68 @@ def test_in_cookbook_filter_true_and_false(
 
     assert _titles(response_true) == [filed.title]
     assert _titles(response_false) == [standalone.title]
+
+
+##########################-
+# planning / in_planning
+##########################-
+
+
+def test_planning_filter_matches_planning_name(auth_client: APIClient, regular_user: User):
+    """Test that ``?planning=`` filters by (partial, case-insensitive) planning name."""
+    scheduled = _make_recipe(creator=regular_user, title="Scheduled recipe")
+    _make_recipe(creator=regular_user, title="Unscheduled recipe")
+    planning = Planning.objects.create(name="Semaine du 20 juillet", creator=regular_user)  # pyright: ignore[reportAttributeAccessIssue]
+    _schedule_in_planning(scheduled, planning)
+    url = reverse("recipe-list")
+
+    response = auth_client.get(url, {"planning": "semaine"})
+
+    assert _titles(response) == [scheduled.title]
+
+
+def test_planning_filter_excludes_non_matching_planning_names(
+    auth_client: APIClient, regular_user: User
+):
+    """Test that an unrelated planning name search term returns no results."""
+    scheduled = _make_recipe(creator=regular_user, title="Scheduled recipe")
+    planning = Planning.objects.create(name="Semaine du 20 juillet", creator=regular_user)  # pyright: ignore[reportAttributeAccessIssue]
+    _schedule_in_planning(scheduled, planning)
+    url = reverse("recipe-list")
+
+    response = auth_client.get(url, {"planning": "aout"})
+
+    assert _titles(response) == []
+
+
+def test_in_planning_filter_true_and_false(auth_client: APIClient, regular_user: User):
+    """Test that ``?in_planning=`` filters recipes by whether they're scheduled in a planning."""
+    scheduled = _make_recipe(creator=regular_user, title="Scheduled recipe")
+    unscheduled = _make_recipe(creator=regular_user, title="Unscheduled recipe")
+    planning = Planning.objects.create(name="Semaine du 20 juillet", creator=regular_user)  # pyright: ignore[reportAttributeAccessIssue]
+    _schedule_in_planning(scheduled, planning)
+    url = reverse("recipe-list")
+
+    response_true = auth_client.get(url, {"in_planning": "true"})
+    response_false = auth_client.get(url, {"in_planning": "false"})
+
+    assert _titles(response_true) == [scheduled.title]
+    assert _titles(response_false) == [unscheduled.title]
+
+
+def test_planning_filter_does_not_duplicate_recipe_scheduled_multiple_times(
+    auth_client: APIClient, regular_user: User
+):
+    """A recipe scheduled several times in the same planning must appear only once."""
+    recipe = _make_recipe(creator=regular_user, title="Scheduled twice")
+    planning = Planning.objects.create(name="Semaine du 20 juillet", creator=regular_user)  # pyright: ignore[reportAttributeAccessIssue]
+    _schedule_in_planning(recipe, planning, dayofweek="lundi")
+    _schedule_in_planning(recipe, planning, dayofweek="mardi")
+    url = reverse("recipe-list")
+
+    response = auth_client.get(url, {"planning": "semaine"})
+
+    assert _titles(response) == [recipe.title]
 
 
 ##########################################-
