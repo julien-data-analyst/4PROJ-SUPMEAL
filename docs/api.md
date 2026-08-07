@@ -734,6 +734,8 @@ they created, or recipes filed in a cookbook they own or are shared.
 | `ingredients` | string | Comma-separated ingredient names and/or ids; the recipe must contain **all** of them. |
 | `cookbook` | string | Case-insensitive partial match on the cookbook's name. |
 | `in_cookbook` | boolean | `true`: only recipes filed in a cookbook. `false`: only standalone recipes. |
+| `planning` | string | Case-insensitive partial match on the name of a planning the recipe is scheduled in. |
+| `in_planning` | boolean | `true`: only recipes scheduled in at least one planning. `false`: only recipes scheduled in none. |
 | `favorite` | boolean | `true`: only the caller's favorited recipes. `false`: only non-favorites. |
 | `shared_with_me` | boolean | `true`: only recipes in a cookbook shared with the caller (not owned by them). |
 | `prep_time_min` / `prep_time_max` | number | Bounds (minutes) on the sum of the recipe's step durations. |
@@ -1017,6 +1019,7 @@ caller's role on that cookbook.
 | Name | Type | Description |
 | --- | --- | --- |
 | `name` | string | Case-insensitive partial match on planning name. |
+| `type` | string | Exact match on the planning's type: `journalier` (daily) or `hebdomadaire` (weekly). |
 | `cookbook` | string | Case-insensitive partial match on the cookbook's name. |
 | `in_cookbook` | boolean | `true`: only plannings filed in a cookbook. `false`: only standalone plannings. |
 | `shared_with_me` | boolean | `true`: only plannings in a cookbook shared with the caller. |
