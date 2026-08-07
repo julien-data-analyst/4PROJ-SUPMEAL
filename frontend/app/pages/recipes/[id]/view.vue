@@ -181,7 +181,9 @@ const {
                 >
                   −
                 </button>
-                <span class="min-w-[70px] text-center text-[12px] text-gray-400">
+                <span
+                  class="min-w-[70px] text-center text-[12px] text-gray-400"
+                >
                   {{ selectedPersons }} pers.
                 </span>
                 <button

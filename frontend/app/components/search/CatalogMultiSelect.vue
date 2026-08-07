@@ -35,9 +35,7 @@ const modelValue = defineModel<string>({ required: true });
 const open = ref(false);
 const rootRef = ref<HTMLElement | null>(null);
 const search = ref("");
-const options = ref<{ id: number; name: string; image?: string | null }[]>(
-  [],
-);
+const options = ref<{ id: number; name: string; image?: string | null }[]>([]);
 // Accumulated (not replaced) across every search, keyed by lowercased name,
 // so a chip for an already-selected item still shows its image even once
 // it's scrolled out of the current search results.
