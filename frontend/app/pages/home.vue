@@ -3,23 +3,45 @@ import AppButton from "~/components/buttons/AppButton.vue";
 import RecipeCard from "~/components/recipes/RecipeCard.vue";
 import PlanningCard from "~/components/planning/PlanningCard.vue";
 import CookbookCard from "~/components/cookbook/CookbookCard.vue";
+import SharedCookbookCard from "~/components/cookbook/SharedCookbookCard.vue";
 import IconPlus from "~/components/icons/IconPlus.vue";
 import IconUpload from "~/components/icons/IconUpload.vue";
 import IconDownload from "~/components/icons/IconDownload.vue";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
+import IconShared from "~/components/icons/IconShared.vue";
+import IconRecipe from "~/components/icons/IconRecipe.vue";
+import IconCalendar from "~/components/icons/IconCalendar.vue";
 import { useRecipes, sortFavoritesFirst } from "~/composables/useRecipes";
 import { usePlanning } from "~/composables/usePlanning";
-import { useCookbooks } from "~/composables/useCookbooks";
+import {
+  useCookbooks,
+  getCookbookRole,
+  getCookbookLastActivity,
+} from "~/composables/useCookbooks";
+import { useAuth } from "~/composables/useAuth";
+import type {
+  Cookbook,
+  CookbookRole,
+} from "~/stores/cookbooks/useCookbookStore";
 
 definePageMeta({ layout: "app" });
 
 const { store, fetchRecentRecipes } = useRecipes();
 const { store: planningStore, fetchRecentPlannings } = usePlanning();
-const { store: cookbookStore, fetchRecentCookbooks } = useCookbooks();
+const { fetchRecentCookbooks, fetchSharedCookbooks } = useCookbooks();
+const { user } = useAuth();
 
 const isLoading = ref(true);
 const isPlanningLoading = ref(true);
 const isCookbookLoading = ref(true);
+const isSharedActivityLoading = ref(true);
+
+// Both cookbook sections below hit the same underlying store, whose
+// `cookbooks`/`pagination` only ever hold the *last* fetch's results - kept
+// as page-local lists instead so "Mes cookbooks" and "Cookbooks partagés"
+// don't clobber each other.
+const myCookbooks = ref<Cookbook[]>([]);
+const sharedActivityCookbooks = ref<Cookbook[]>([]);
 
 onMounted(async () => {
   try {
@@ -39,9 +61,26 @@ onMounted(async () => {
 
 onMounted(async () => {
   try {
-    await fetchRecentCookbooks(3);
+    myCookbooks.value = await fetchRecentCookbooks(3);
   } finally {
     isCookbookLoading.value = false;
+  }
+});
+
+onMounted(async () => {
+  try {
+    // No `page_size` filter for the activity ranking: the backend sorts by
+    // `-updated_at` on the cookbook itself, which doesn't reflect nested
+    // recipe/planning/member changes - so a wider page is pulled and
+    // re-sorted client-side by real last activity before keeping the top 3.
+    const shared = await fetchSharedCookbooks();
+    sharedActivityCookbooks.value = [...shared]
+      .sort((a, b) =>
+        getCookbookLastActivity(b).localeCompare(getCookbookLastActivity(a)),
+      )
+      .slice(0, 3);
+  } finally {
+    isSharedActivityLoading.value = false;
   }
 });
 
@@ -61,6 +100,23 @@ const recentPlannings = computed(() =>
       new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
   ),
 );
+
+const newMenuOpen = ref(false);
+const newMenuRef = ref<HTMLElement | null>(null);
+onClickOutside(newMenuRef, () => (newMenuOpen.value = false));
+
+const newMenuItemClasses =
+  "flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-sup-very-gray hover:bg-sup-light-gray";
+
+const sharedActivityRoles = computed(() =>
+  sharedActivityCookbooks.value.map((cookbook) => ({
+    cookbook,
+    role: (getCookbookRole(cookbook, user.value?.id) ?? "reader") as Exclude<
+      CookbookRole,
+      "admin"
+    >,
+  })),
+);
 </script>
 
 <template>
@@ -76,10 +132,46 @@ const recentPlannings = computed(() =>
           <template #icon><IconDownload size="xs" /></template>
           Exporter
         </AppButton>
-        <AppButton variant="primary" to="/new">
-          <template #icon><IconPlus size="xs" /></template>
-          Nouveau
-        </AppButton>
+        <div ref="newMenuRef" class="relative">
+          <AppButton
+            type="button"
+            variant="primary"
+            @click="newMenuOpen = !newMenuOpen"
+          >
+            <template #icon><IconPlus size="xs" /></template>
+            Nouveau
+          </AppButton>
+
+          <div
+            v-if="newMenuOpen"
+            class="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-md border border-sup-border bg-sup-withe py-1 shadow-lg"
+          >
+            <NuxtLink
+              to="/new"
+              :class="newMenuItemClasses"
+              @click="newMenuOpen = false"
+            >
+              <IconRecipe size="xs" />
+              Nouvelle recette
+            </NuxtLink>
+            <NuxtLink
+              to="/planning/new"
+              :class="newMenuItemClasses"
+              @click="newMenuOpen = false"
+            >
+              <IconCalendar size="xs" />
+              Nouveau planning
+            </NuxtLink>
+            <NuxtLink
+              to="/cookbooks/new"
+              :class="newMenuItemClasses"
+              @click="newMenuOpen = false"
+            >
+              <IconCookbook size="xs" />
+              Nouveau cookbook
+            </NuxtLink>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -155,11 +247,11 @@ const recentPlannings = computed(() =>
       </div>
 
       <div
-        v-else-if="cookbookStore.cookbooks.length"
+        v-else-if="myCookbooks.length"
         class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4"
       >
         <CookbookCard
-          v-for="cookbook in cookbookStore.cookbooks"
+          v-for="cookbook in myCookbooks"
           :key="cookbook.id"
           :cookbook="cookbook"
           :to="`/cookbooks/${cookbook.id}/view`"
@@ -219,6 +311,48 @@ const recentPlannings = computed(() =>
       >
         Vous n'avez pas encore de planning. Créez votre premier planning de
         repas !
+      </div>
+    </section>
+
+    <!-- Cookbooks partagés récemment modifiés -->
+    <section class="mt-[30px]">
+      <div class="mb-[14px] flex items-center justify-between">
+        <h2 class="text-[18px] font-semibold text-sup-very-gray">
+          Cookbooks partagés récemment modifiés
+        </h2>
+        <NuxtLink
+          to="/sharedwithme"
+          class="text-[13px] font-semibold text-sup-dark-green hover:underline"
+        >
+          Voir tout
+        </NuxtLink>
+      </div>
+
+      <div v-if="isSharedActivityLoading" class="flex flex-col gap-3">
+        <div
+          v-for="n in 3"
+          :key="n"
+          class="h-[68px] animate-pulse rounded-[10px] bg-sup-border/50"
+        />
+      </div>
+
+      <div v-else-if="sharedActivityRoles.length" class="flex flex-col gap-3">
+        <SharedCookbookCard
+          v-for="{ cookbook, role } in sharedActivityRoles"
+          :key="cookbook.id"
+          :cookbook="cookbook"
+          :role="role"
+          :activity-at="getCookbookLastActivity(cookbook)"
+          :to="`/cookbooks/${cookbook.id}/view`"
+        />
+      </div>
+
+      <div
+        v-else
+        class="flex items-center gap-3 rounded-[10px] border border-dashed border-sup-border bg-sup-withe p-6 text-[13px] text-gray-400"
+      >
+        <IconShared size="sm" />
+        Aucun cookbook n'a encore été partagé avec vous.
       </div>
     </section>
   </div>

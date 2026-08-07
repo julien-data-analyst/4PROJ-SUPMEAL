@@ -6,7 +6,7 @@ import IconTrash from "~/components/icons/IconTrash.vue";
 import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
 import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
 import { useRecipeView } from "~/composables/useRecipesEditView";
-import { formatNumber } from "~/composables/useRecipes";
+import { formatNumber, duryToMinutes } from "~/composables/useRecipes";
 import { useGoBack } from "~/composables/useGoBack";
 
 definePageMeta({ layout: "app" });
@@ -18,7 +18,8 @@ const {
   isLoading,
   deleteModalOpen,
   recipe,
-  isOwner,
+  canEdit,
+  canManage,
   totalPrepMinutes,
   cookbookName,
   onToggleFavorite,
@@ -53,7 +54,7 @@ const {
           {{ recipe.is_favorite ? "Favori" : "Ajouter aux favoris" }}
         </AppButton>
         <button
-          v-if="isOwner"
+          v-if="canManage"
           type="button"
           class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-red-200 text-sup-red-error transition hover:bg-sup-red-error/10"
           title="Supprimer la recette"
@@ -62,7 +63,7 @@ const {
           <IconTrash size="xs" />
         </button>
         <AppButton
-          v-if="isOwner"
+          v-if="canEdit"
           variant="primary"
           :to="`/recipes/${recipeId}/edit`"
         >
@@ -198,6 +199,12 @@ const {
                 <p class="mb-1 text-[14.5px] font-bold text-sup-very-gray">
                   {{ index + 1 }}.
                   {{ step.type === "cook" ? "Cuisson" : "Préparation" }}
+                  <span
+                    v-if="Number(duryToMinutes(step.dury)) > 0"
+                    class="text-[12px] font-normal text-gray-400"
+                  >
+                    ({{ formatNumber(duryToMinutes(step.dury)) }} min)
+                  </span>
                 </p>
                 <div
                   class="text-[13.5px] text-sup-very-gray"
@@ -213,7 +220,7 @@ const {
       </div>
 
       <div
-        v-if="!isOwner"
+        v-if="!canEdit"
         class="mt-4 flex items-center gap-2 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-[14px] py-[10px] text-[12.5px] font-medium text-[#8A6D00]"
       >
         <IconAlertTriangle size="xs" class="shrink-0" />

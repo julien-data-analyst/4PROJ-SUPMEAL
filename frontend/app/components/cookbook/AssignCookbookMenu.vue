@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useCookbookStore } from "~/stores/cookbooks/useCookbookStore";
+import { useAuth } from "~/composables/useAuth";
+import { hasCookbookRank } from "~/composables/useCookbooks";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
 import IconSearch from "~/components/icons/IconSearch.vue";
 
@@ -9,6 +11,7 @@ const emit = defineEmits<{
 }>();
 
 const store = useCookbookStore();
+const { user } = useAuth();
 const query = ref("");
 const results = ref<{ id: number; name: string }[]>([]);
 const isLoading = ref(false);
@@ -21,8 +24,14 @@ const search = async () => {
       name: query.value || undefined,
       page_size: 8,
     });
-    // Already-assigned cookbook is pointless to offer again.
-    results.value = found.filter((c) => c.id !== props.currentCookbookId);
+    // Filing a recipe/planning into a cookbook requires "creator" rank
+    // there (see the backend's validate_cookbook) - a shared cookbook
+    // where the caller is only reader/commentator/editor isn't offered.
+    results.value = found.filter(
+      (c) =>
+        c.id !== props.currentCookbookId &&
+        hasCookbookRank(c, user.value?.id, "creator"),
+    );
   } finally {
     isLoading.value = false;
   }

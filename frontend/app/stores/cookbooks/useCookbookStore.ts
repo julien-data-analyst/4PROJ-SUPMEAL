@@ -5,11 +5,24 @@ import type { User } from "~/composables/useAuth";
 import type { Recipe } from "~/stores/useRecipeStore";
 import type { Planning } from "~/stores/usePlanningStore";
 
+// From least to most permissive - see backend's cookbooks.permissions.ROLE_RANK.
+// "admin" is never stored: it's implicit for the cookbook's own creator.
+export type CookbookRole =
+  "reader" | "commentator" | "editor" | "creator" | "admin";
+
+export interface SharedUserCookbook {
+  user: User;
+  role: Exclude<CookbookRole, "admin">;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Cookbook {
   id: number;
   name: string;
   icon: string | null;
   creator: User;
+  shared_with: SharedUserCookbook[];
   recipes: Recipe[];
   plannings: Planning[];
   created_at: string;
@@ -23,8 +36,15 @@ export interface CookbookWritePayload {
 
 export interface CookbookListParams {
   name?: string;
+  shared_with_me?: boolean;
   page?: number;
   page_size?: number;
+}
+
+export interface ShareItem {
+  user?: number;
+  email?: string;
+  role: Exclude<CookbookRole, "admin">;
 }
 
 interface PaginatedResponse<T> {
@@ -141,6 +161,37 @@ export const useCookbookStore = defineStore("cookbooks", () => {
     Reflect.deleteProperty(cookbookNames, id);
   };
 
+  const applyCookbookUpdate = (cookbook: Cookbook) => {
+    cookbooks.value = cookbooks.value.map((c: Cookbook) =>
+      c.id === cookbook.id ? cookbook : c,
+    );
+    if (currentCookbook.value?.id === cookbook.id) {
+      currentCookbook.value = cookbook;
+    }
+  };
+
+  const shareCookbook = async (
+    id: number,
+    shares: ShareItem[],
+  ): Promise<Cookbook> => {
+    const cookbook = await post<Cookbook>(`/cookbooks/${id}/share/`, {
+      shares,
+    } as unknown as Record<string, unknown>);
+    applyCookbookUpdate(cookbook);
+    return cookbook;
+  };
+
+  const unshareCookbook = async (
+    id: number,
+    userIds: number[],
+  ): Promise<Cookbook> => {
+    const cookbook = await post<Cookbook>(`/cookbooks/${id}/unshare/`, {
+      users: userIds,
+    } as unknown as Record<string, unknown>);
+    applyCookbookUpdate(cookbook);
+    return cookbook;
+  };
+
   const fetchCookbookName = async (id: number): Promise<string> => {
     if (cookbookNames[id]) return cookbookNames[id];
     const cookbook = await get<Cookbook>(`/cookbooks/${id}/`);
@@ -160,6 +211,8 @@ export const useCookbookStore = defineStore("cookbooks", () => {
     createCookbook,
     updateCookbook,
     deleteCookbook,
+    shareCookbook,
+    unshareCookbook,
     fetchCookbookName,
   };
 });

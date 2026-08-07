@@ -13,7 +13,22 @@ import IconCookbook from "~/components/icons/IconCookbook.vue";
 import DeletePlanningModal from "~/components/planning/DeletePlanningModal.vue";
 import AssignCookbookMenu from "~/components/cookbook/AssignCookbookMenu.vue";
 
-const props = defineProps<{ planning: Planning; to: string }>();
+const props = withDefaults(
+  defineProps<{
+    planning: Planning;
+    to: string;
+    // See RecipeCard's identical props - gates the menu for a shared
+    // cookbook's reader/commentator (canEdit=false) or editor (canManage=
+    // false) role. canReassignCookbook separately hides just the
+    // "Cookbook" item - a cookbook's own Planning tab renders this card
+    // for a planning already filed there, where moving it to a different
+    // cookbook has no place in the UI.
+    canEdit?: boolean;
+    canManage?: boolean;
+    canReassignCookbook?: boolean;
+  }>(),
+  { canEdit: true, canManage: true, canReassignCookbook: true },
+);
 
 const store = usePlanningStore();
 const toast = useToastStore();
@@ -116,6 +131,7 @@ const menuItemClasses =
           Vue
         </NuxtLink>
         <NuxtLink
+          v-if="canEdit"
           :to="`/planning/${planning.id}/edit`"
           :class="menuItemClasses"
           @click="menuOpen = false"
@@ -124,6 +140,7 @@ const menuItemClasses =
           Modifier
         </NuxtLink>
         <button
+          v-if="canManage && canReassignCookbook"
           type="button"
           :class="menuItemClasses"
           @click.prevent="openCookbookMenu"
@@ -132,6 +149,7 @@ const menuItemClasses =
           Cookbook
         </button>
         <button
+          v-if="canManage"
           type="button"
           :class="[menuItemClasses, 'text-sup-red-error']"
           @click.prevent="openDeleteModal"
