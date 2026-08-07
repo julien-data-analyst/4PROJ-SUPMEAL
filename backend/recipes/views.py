@@ -92,8 +92,23 @@ RECIPE_EXPORT_EXAMPLE = {
             "Export **your personal recipes** (recipes you created that aren't filed into "
             "any cookbook) as a JSON array, one portable object per recipe - see "
             "`GET /api/recipes/{id}/export/` for the shape of each object. The whole array "
-            "can be re-imported as-is via `POST /api/recipes/import/`."
+            "can be re-imported as-is via `POST /api/recipes/import/`. Pass `ids` (a "
+            "comma-separated list of recipe ids) to export only a subset of your personal "
+            "recipes instead of all of them."
         ),
+        parameters=[
+            OpenApiParameter(
+                name="ids",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Comma-separated list of recipe ids to export (e.g. `1,2,3`). Only ids "
+                    "among your own personal recipes are matched; unknown or foreign ids are "
+                    "silently ignored. Omit to export all of your personal recipes."
+                ),
+                required=False,
+                examples=[OpenApiExample("Exemple", value="1,2,3")],
+            ),
+        ],
         examples=[
             OpenApiExample(
                 "Exported personal recipes",
@@ -333,6 +348,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipes = Recipe.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
             creator=request.user, cookbook__isnull=True
         ).prefetch_related("recipe_ingredients__ingredient", "recipe_tags__tag", "steps")
+        ids = request.query_params.get("ids")
+        if isinstance(ids, str) and ids:
+            id_list = [int(token) for token in ids.split(",") if token.strip().isdigit()]
+            recipes = recipes.filter(pk__in=id_list)
         return Response(
             export_recipes(recipes),
             headers={"Content-Disposition": 'attachment; filename="recipes_export.json"'},
