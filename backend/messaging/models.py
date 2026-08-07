@@ -43,9 +43,7 @@ class Message(models.Model):
         ordering = ["created_at"]
         constraints = [
             models.CheckConstraint(
-                condition=~(
-                    models.Q(recipe__isnull=False) & models.Q(planning__isnull=False)
-                ),
+                condition=models.Q(recipe__isnull=True) | models.Q(planning__isnull=True),
                 name="message_not_both_recipe_and_planning",
             ),
         ]

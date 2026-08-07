@@ -128,7 +128,7 @@ class BaseMessageViewSet(
     ),
 )
 class CookbookMessageViewSet(BaseMessageViewSet):
-    """Messages posted to a cookbook's global channel (``recipe``/``planning`` are always ``None``)."""
+    """Messages posted to a cookbook's global channel."""
 
     def get_queryset(self):  # pyright: ignore[reportIncompatibleMethodOverride]
         return Message.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
