@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import AppButton from "~/components/buttons/AppButton.vue";
 import IconChevronLeft from "~/components/icons/IconChevronLeft.vue";
-import IconEye from "~/components/icons/IconEye.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
 import IconSave from "~/components/icons/IconSave.vue";
 import IconCamera from "~/components/icons/IconCamera.vue";
@@ -29,7 +28,6 @@ const {
   ingredientLines,
   tagLines,
   stepLines,
-  previewMode,
   isLoading,
   isSaving,
   saveError,
@@ -63,14 +61,6 @@ const {
       </button>
 
       <div class="flex flex-wrap items-center gap-[10px]">
-        <AppButton
-          type="button"
-          variant="secondary"
-          @click="previewMode = !previewMode"
-        >
-          <template #icon><IconEye size="xs" /></template>
-          {{ previewMode ? "Édition" : "Aperçu" }}
-        </AppButton>
         <button
           v-if="mode === 'edit'"
           type="button"
@@ -198,7 +188,6 @@ const {
             :model-value="step"
             :index="index"
             :total="stepLines.length"
-            :preview-mode="previewMode"
             @update:model-value="
               (v) =>
                 (stepLines = stepLines.map((s, i) => (i === index ? v : s)))
