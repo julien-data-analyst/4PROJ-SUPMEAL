@@ -161,18 +161,30 @@ function escapeHtml(text: string): string {
 }
 
 // Minimal, dependency-free markdown subset for recipe steps: headings, bold,
-// italic, and unordered/ordered lists - escapes HTML first so this is safe to
-// render with v-html.
+// italic, unordered/ordered lists, and hard line breaks (a trailing "\"
+// before the newline - the convention the step editor's Tiptap/tiptap-markdown
+// serializer uses for Shift+Enter, see StepEditor.vue) - escapes HTML first
+// so this is safe to render with v-html.
 export function renderStepMarkdown(source: string): string {
   const escaped = escapeHtml(source ?? "");
   const lines = escaped.split(/\r?\n/);
   const html: string[] = [];
   let listType: "ul" | "ol" | null = null;
+  let paragraphBuffer: string[] = [];
 
   const closeList = () => {
     if (listType) {
       html.push(listType === "ul" ? "</ul>" : "</ol>");
       listType = null;
+    }
+  };
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length) {
+      html.push(
+        `<p class="${paragraphClasses}">${paragraphBuffer.join("<br>")}</p>`,
+      );
+      paragraphBuffer = [];
     }
   };
 
@@ -186,17 +198,20 @@ export function renderStepMarkdown(source: string): string {
   // never passes through the component's own template compilation.
   const headingClasses = "font-bold mt-2 mb-1";
   const listClasses = "pl-5 my-1 space-y-0.5";
+  const paragraphClasses = "my-1";
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
     if (!line) {
       closeList();
+      flushParagraph();
       continue;
     }
 
     const heading = /^(#{1,3})\s+(.*)$/.exec(line);
     if (heading) {
       closeList();
+      flushParagraph();
       const level = (heading[1]?.length ?? 1) + 2;
       html.push(
         `<h${level} class="${headingClasses}">${inline(heading[2] ?? "")}</h${level}>`,
@@ -206,6 +221,7 @@ export function renderStepMarkdown(source: string): string {
 
     const ordered = /^\d+\.\s+(.*)$/.exec(line);
     if (ordered) {
+      flushParagraph();
       if (listType !== "ol") {
         closeList();
         html.push(`<ol class="${listClasses} list-decimal">`);
@@ -217,6 +233,7 @@ export function renderStepMarkdown(source: string): string {
 
     const bullet = /^[-*]\s+(.*)$/.exec(line);
     if (bullet) {
+      flushParagraph();
       if (listType !== "ul") {
         closeList();
         html.push(`<ul class="${listClasses} list-disc">`);
@@ -227,33 +244,28 @@ export function renderStepMarkdown(source: string): string {
     }
 
     closeList();
-    html.push(`<p class="my-1">${inline(line)}</p>`);
+    const hardBreak = /\\$/.exec(line);
+    if (hardBreak) {
+      paragraphBuffer.push(inline(line.slice(0, -1).trimEnd()));
+      continue;
+    }
+    paragraphBuffer.push(inline(line));
+    flushParagraph();
   }
 
   closeList();
+  flushParagraph();
   return html.join("");
 }
 
-// Wraps (or prefixes) the current selection of a textarea with markdown
-// syntax, mirroring the toolbar buttons of the prototype editor.
-export function applyMarkdownAction(
-  textarea: HTMLTextAreaElement,
-  action: "bold" | "italic" | "list",
-): string {
-  const { selectionStart, selectionEnd, value } = textarea;
-  const selected = value.slice(selectionStart, selectionEnd);
+// Very deliberately conservative: only explicit http(s):// and www. links -
+// broad "looks like a domain" matching would false-positive on things like
+// "180°C" abbreviations. Used to keep links out of recipe step instructions
+// (see the validate() step of useRecipeEditForm).
+const URL_PATTERN = /(https?:\/\/|www\.)\S+/i;
 
-  if (action === "list") {
-    const before = value.slice(0, selectionStart);
-    const needsNewline = before.length > 0 && !before.endsWith("\n");
-    const prefix = `${needsNewline ? "\n" : ""}- `;
-    return `${before}${prefix}${selected}${value.slice(selectionEnd)}`;
-  }
-
-  const marker = action === "bold" ? "**" : "*";
-  const placeholder = action === "bold" ? "texte en gras" : "texte en italique";
-  const wrapped = `${marker}${selected || placeholder}${marker}`;
-  return `${value.slice(0, selectionStart)}${wrapped}${value.slice(selectionEnd)}`;
+export function containsUrl(text: string): boolean {
+  return URL_PATTERN.test(text ?? "");
 }
 
 export function recipeToIngredientLines(recipe: Recipe): IngredientLine[] {
