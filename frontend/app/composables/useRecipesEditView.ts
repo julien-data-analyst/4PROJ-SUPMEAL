@@ -26,6 +26,7 @@ import {
   renderStepMarkdown,
   useRecipes,
   capitalizeFirst,
+  containsUrl,
 } from "~/composables/useRecipes";
 import type {
   IngredientLine,
@@ -59,7 +60,6 @@ export function useRecipeEditForm(props: {
   const tagLines = ref<TagLine[]>([]);
   const stepLines = ref<StepLine[]>([emptyStepLine()]);
 
-  const previewMode = ref(false);
   const isLoading = ref(props.mode === "edit");
   const isSaving = ref(false);
   const saveError = ref("");
@@ -192,6 +192,14 @@ export function useRecipeEditForm(props: {
       usedTagNames.add(key);
     }
 
+    const stepsWithUrls = stepLines.value
+      .map((step, i) => (containsUrl(step.description) ? i + 1 : null))
+      .filter((n): n is number => n !== null);
+    if (stepsWithUrls.length) {
+      const plural = stepsWithUrls.length > 1;
+      return `${plural ? "Les étapes" : "L'étape"} ${stepsWithUrls.join(", ")} contien${plural ? "nent" : "t"} un lien, ce qui n'est pas autorisé dans les instructions.`;
+    }
+
     return null;
   };
 
@@ -238,6 +246,7 @@ export function useRecipeEditForm(props: {
     const error = validate();
     if (error) {
       saveError.value = error;
+      toast.error(error);
       return;
     }
 
@@ -291,7 +300,6 @@ export function useRecipeEditForm(props: {
     ingredientLines,
     tagLines,
     stepLines,
-    previewMode,
     isLoading,
     isSaving,
     saveError,
