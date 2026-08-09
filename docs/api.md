@@ -239,6 +239,40 @@ integration steps.
 
 ---
 
+### `POST /api/users/oauth/microsoft/link/`
+
+Links the **already-authenticated** caller's own account to a Microsoft
+identity (the "connect my Microsoft account" settings action) - unlike
+[`POST /api/users/oauth/microsoft/`](#post-apiusersoauthmicrosoft)
+(login/registration, `AllowAny`), this always targets `request.user`
+rather than matching/creating an account by email.
+
+**Auth:** `IsAuthenticated`
+
+**Status codes**
+
+| Status | Meaning |
+| --- | --- |
+| `200 OK` | Linked; response includes the updated user and a confirmation message. |
+| `400 Bad Request` | `code` missing, Microsoft rejected the exchange (expired/used code, wrong `redirect_uri`, revoked consent), the Graph profile has no email, or that email already belongs to a **different** account. |
+| `401 Unauthorized` | No/invalid access token. |
+
+**Parameters** (body, JSON)
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `code` | string | yes | Authorization code obtained the same way as the login flow, just while already signed in. |
+
+**Workflow**
+
+1. From a settings page, the frontend redirects the browser to Microsoft to authenticate/consent, same as the login flow.
+2. Microsoft redirects back with `?code=...`; the frontend `POST`s `{ code }` here, with `Authorization: Bearer <access>` for the *current* session.
+3. Backend exchanges `code` for a Graph access token and fetches the profile (same helpers as the login route).
+4. Backend syncs `request.user.email` to the Microsoft profile's email and calls `set_unusable_password()` on the account - **the account can only sign in via Microsoft from then on**.
+5. Response: `{ "user": {...}, "detail": "Microsoft account linked successfully. You can only sign in with Microsoft from now on." }`.
+
+---
+
 ### `POST /api/users/token/refresh/`
 
 Exchanges a refresh token for a new access token. Built-in Simple JWT view
@@ -297,6 +331,64 @@ Changes the authenticated user's own password.
 3. Serializer checks `current_password` against the stored hash.
 4. Server calls `set_password(new_password)` and saves the user.
 5. **Note:** existing access/refresh tokens are *not* revoked by this call - combine with `POST /api/users/logout/` if other sessions should be force-logged-out too.
+
+---
+
+### `POST /api/users/change-email/`
+
+Changes the authenticated user's own email address.
+
+**Auth:** `IsAuthenticated`
+
+**Status codes**
+
+| Status | Meaning |
+| --- | --- |
+| `200 OK` | `{ "detail": "Email updated successfully.", "email": "<new_email>", "oauth_unlinked": <bool> }` |
+| `400 Bad Request` | `new_email` already used by another account, or the caller's account is OAuth-only and `new_password` is missing/fails Django's password validators. |
+| `401 Unauthorized` | No/invalid access token. |
+
+**Parameters** (body, JSON)
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `new_email` | string | yes | Must be unique. |
+| `new_password` | string | required only if the account is OAuth-only | Becomes the account's new local password. |
+
+**Workflow**
+
+1. Client `POST`s `{ new_email }` (plus `new_password` if the account has no local password).
+2. If the account only has linked OAuth identities (`user.oauth_accounts.exists()`), `new_password` is required: Microsoft OAuth login matches users by email, so changing it here would otherwise silently desync the two. The password is set and **every linked `OAuthUser` row is deleted** (`oauth_unlinked: true` in the response) - the account becomes local-only.
+3. For an already-local account, only the email changes (`oauth_unlinked: false`).
+
+---
+
+### `POST /api/users/change-avatar/`
+
+Changes the authenticated user's own avatar/profile icon - including OAuth
+accounts, where it overrides whatever avatar was originally synced from the
+provider.
+
+**Auth:** `IsAuthenticated`
+
+**Status codes**
+
+| Status | Meaning |
+| --- | --- |
+| `200 OK` | `{ "detail": "Avatar updated successfully.", "profile_icon": "<data URI>" }` |
+| `400 Bad Request` | Image type not allowed (only PNG/JPEG/SVG), or the data URI is malformed. |
+| `401 Unauthorized` | No/invalid access token. |
+
+**Parameters** (body, JSON)
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `avatar` | string | yes | Base64 data URI (PNG, JPEG or SVG only - `common.image_validation.validate_image_data_uri`). |
+
+**Workflow**
+
+1. Client `POST`s `{ "avatar": "data:image/png;base64,..." }`.
+2. Server validates the MIME type/encoding, stores the data URI directly on `profile_icon`, and returns it.
 
 ---
 
@@ -429,7 +521,8 @@ Deletes a user's own account (or any account, if staff).
 
 1. Client `DELETE`s `/api/users/{id}/`.
 2. Permission check as above.
-3. Row deleted. **Note:** every foreign key to `User` uses `on_delete=PROTECT` - deleting a user who still owns cookbooks/recipes/plannings/messages will raise a `ProtectedError` (surfaced as a `500` today; there is no cascading/reassignment step before delete).
+3. `UserViewSet.perform_destroy()` calls `users.services.delete_user_account()`, which - inside one transaction - unwinds every `PROTECT` FK that would otherwise block the delete, in dependency order: messages (authored by the user, or posted in a cookbook/recipe they own), scheduled-meal links, recipe ingredients/tags/steps/favorites, cuisine preferences, cookbook shares, then the user's own recipes/plannings/cookbooks themselves, their `OAuthUser` rows, and finally the `User` row.
+4. This is a genuine cascading delete, not a reassignment: recipes/plannings/messages the user created - including ones filed inside a cookbook they own, even if authored by someone else - are permanently removed with the account. There is no "keep as orphaned/personal" option here, unlike deleting a cookbook (see [`DELETE /api/cookbooks/{id}/`](#delete-apicookbooksid), where recipes/plannings survive).
 
 ---
 
@@ -561,13 +654,19 @@ Deletes a cookbook. Admin-only.
 | `401 Unauthorized` | No/invalid access token. |
 | `403 Forbidden` | Member but not admin. |
 | `404 Not Found` | Not a member. |
-| `500` (`ProtectedError`) | The cookbook still has recipes/plannings/messages/shares pointing at it via `PROTECT` FKs - nothing in this route unlinks them first. |
 
 **Parameters** (path)
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `id` | integer | Cookbook id. |
+
+**Workflow**
+
+1. `CookbookViewSet.perform_destroy()` unwinds the cookbook's `PROTECT` FKs itself, in one transaction, so this route never 500s under normal use:
+   - `Recipe.cookbook` / `Planning.cookbook` are **cleared, not cascaded** - every recipe/planning filed in the cookbook survives as a standalone personal item owned by whoever created it.
+   - `SharedUserCookbook` (shares) and `Message` (both channels) rows for the cookbook are deleted outright, since they only make sense in this cookbook's context.
+2. This route itself has no "also delete the recipes/plannings" option. To delete some of them along with the cookbook instead of keeping them, delete those specific recipes/plannings first (via their own `DELETE` routes) *before* calling this one - which is what the frontend's cookbook-delete confirmation does (see [`docs/frontend.md`](frontend.md#deletecookbookmodal)).
 
 ---
 
@@ -1127,9 +1226,10 @@ planning itself.
 
 ## 5. Messaging (`messaging`)
 
-Chat messages exist in two flavours of the same underlying resource: a
-cookbook's **global channel**, and a specific **recipe's channel** within
-that cookbook. There is deliberately no update route - a message can only be
+Chat messages exist in three flavours of the same underlying resource: a
+cookbook's **global channel**, a specific **recipe's channel**, and a
+specific **planning's channel** - the latter two always scoped within a
+cookbook. There is deliberately no update route - a message can only be
 posted or deleted, never edited.
 
 ### `GET /api/cookbooks/{cookbook_pk}/messages/`
@@ -1285,4 +1385,62 @@ plus the `recipe_pk`-mismatch `404` case.
 | --- | --- | --- |
 | `cookbook_pk` | integer | Cookbook id. |
 | `recipe_pk` | integer | Recipe id. |
+| `pk` | integer | Message id. |
+
+---
+
+### `GET` / `POST /api/cookbooks/{cookbook_pk}/plannings/{planning_pk}/messages/`
+
+Same behaviour as the cookbook-level list/create routes above, scoped to a
+specific planning's channel instead of the cookbook's global one.
+
+**Auth:** same as the cookbook-level equivalents.
+
+**Status codes:** identical to the two cookbook-level routes above, plus:
+
+| Status | Meaning |
+| --- | --- |
+| `404 Not Found` | Additionally returned if `planning_pk` doesn't belong to `cookbook_pk` (`planning.cookbook_id != cookbook_pk`) - a mismatched pair can't be used to leak or misfile a message. |
+
+**Parameters** (path + query/body)
+
+| Name | Location | Type | Description |
+| --- | --- | --- | --- |
+| `cookbook_pk` | path | integer | Cookbook id. |
+| `planning_pk` | path | integer | Planning id; must be filed in `cookbook_pk`. |
+| `content`, `canal` | body (`POST` only) | string | Same as the cookbook-level route. |
+| `page` / `page_size` | query (`GET` only) | integer | Pagination. |
+
+---
+
+### `GET /api/cookbooks/{cookbook_pk}/plannings/{planning_pk}/messages/{pk}/`
+
+Retrieves one message from the planning's channel.
+
+**Auth/status codes:** identical to the cookbook-level retrieve route above,
+plus the `planning_pk`-mismatch `404` case.
+
+**Parameters** (path)
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `cookbook_pk` | integer | Cookbook id. |
+| `planning_pk` | integer | Planning id. |
+| `pk` | integer | Message id. |
+
+---
+
+### `DELETE /api/cookbooks/{cookbook_pk}/plannings/{planning_pk}/messages/{pk}/`
+
+Deletes a message from the planning's channel.
+
+**Auth/status codes:** identical to the cookbook-level delete route above,
+plus the `planning_pk`-mismatch `404` case.
+
+**Parameters** (path)
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `cookbook_pk` | integer | Cookbook id. |
+| `planning_pk` | integer | Planning id. |
 | `pk` | integer | Message id. |

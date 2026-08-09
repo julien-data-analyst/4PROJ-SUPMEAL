@@ -248,6 +248,40 @@ connecte l'utilisateur (création du compte à la première connexion). Voir
 
 ---
 
+### `POST /api/users/oauth/microsoft/link/`
+
+Relie le compte de l'appelant **déjà authentifié** à une identité Microsoft
+(l'action « connecter mon compte Microsoft » des paramètres) - contrairement
+à [`POST /api/users/oauth/microsoft/`](#post-apiusersoauthmicrosoft)
+(connexion/inscription, `AllowAny`), cette route cible toujours
+`request.user` plutôt que d'apparier/créer un compte par email.
+
+**Auth :** `IsAuthenticated`
+
+**Codes de statut**
+
+| Statut | Signification |
+| --- | --- |
+| `200 OK` | Liaison effectuée ; la réponse inclut l'utilisateur mis à jour et un message de confirmation. |
+| `400 Bad Request` | `code` manquant, Microsoft a rejeté l'échange (code expiré/déjà utilisé, mauvais `redirect_uri`, consentement révoqué), le profil Graph n'a pas d'email, ou cet email appartient déjà à un compte **différent**. |
+| `401 Unauthorized` | Access token absent/invalide. |
+
+**Paramètres** (corps, JSON)
+
+| Nom | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `code` | string | oui | Code d'autorisation obtenu de la même façon que pour la connexion, mais en étant déjà connecté. |
+
+**Workflow**
+
+1. Depuis une page de paramètres, le frontend redirige le navigateur vers Microsoft pour l'authentification/le consentement, comme pour la connexion.
+2. Microsoft redirige avec `?code=...` ; le frontend envoie `{ code }` en `POST` ici, avec `Authorization: Bearer <access>` pour la session *courante*.
+3. Le backend échange `code` contre un access token Graph et récupère le profil (mêmes fonctions que la route de connexion).
+4. Le backend synchronise `request.user.email` avec l'email du profil Microsoft et appelle `set_unusable_password()` sur le compte - **le compte ne peut plus se connecter que via Microsoft à partir de là**.
+5. Réponse : `{ "user": {...}, "detail": "Microsoft account linked successfully. You can only sign in with Microsoft from now on." }`.
+
+---
+
 ### `POST /api/users/token/refresh/`
 
 Échange un refresh token contre un nouvel access token. Vue Simple JWT
@@ -307,6 +341,64 @@ Change le mot de passe de l'utilisateur authentifié lui-même.
 3. Le serializer vérifie `current_password` contre le hash stocké.
 4. Le serveur appelle `set_password(new_password)` et sauvegarde l'utilisateur.
 5. **Remarque :** les access/refresh tokens existants ne sont *pas* révoqués par cet appel - combiner avec `POST /api/users/logout/` si les autres sessions doivent aussi être déconnectées de force.
+
+---
+
+### `POST /api/users/change-email/`
+
+Change l'adresse email de l'utilisateur authentifié lui-même.
+
+**Auth :** `IsAuthenticated`
+
+**Codes de statut**
+
+| Statut | Signification |
+| --- | --- |
+| `200 OK` | `{ "detail": "Email updated successfully.", "email": "<new_email>", "oauth_unlinked": <bool> }` |
+| `400 Bad Request` | `new_email` déjà utilisé par un autre compte, ou compte OAuth-only avec `new_password` manquant/rejeté par les validateurs Django. |
+| `401 Unauthorized` | Access token absent/invalide. |
+
+**Paramètres** (corps, JSON)
+
+| Nom | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `new_email` | string | oui | Doit être unique. |
+| `new_password` | string | requis uniquement si le compte est OAuth-only | Devient le nouveau mot de passe local du compte. |
+
+**Workflow**
+
+1. Le client envoie `{ new_email }` (plus `new_password` si le compte n'a pas de mot de passe local).
+2. Si le compte n'a que des identités OAuth liées (`user.oauth_accounts.exists()`), `new_password` est requis : la connexion OAuth Microsoft apparie les utilisateurs par email, donc le changer ici désynchroniserait sinon silencieusement les deux. Le mot de passe est défini et **chaque ligne `OAuthUser` liée est supprimée** (`oauth_unlinked: true` dans la réponse) - le compte devient local uniquement.
+3. Pour un compte déjà local, seul l'email change (`oauth_unlinked: false`).
+
+---
+
+### `POST /api/users/change-avatar/`
+
+Change l'avatar/l'icône de profil de l'utilisateur authentifié lui-même -
+y compris pour les comptes OAuth, où elle remplace l'avatar
+synchronisé à l'origine depuis le fournisseur.
+
+**Auth :** `IsAuthenticated`
+
+**Codes de statut**
+
+| Statut | Signification |
+| --- | --- |
+| `200 OK` | `{ "detail": "Avatar updated successfully.", "profile_icon": "<data URI>" }` |
+| `400 Bad Request` | Type d'image non autorisé (PNG/JPEG/SVG uniquement), ou data URI malformée. |
+| `401 Unauthorized` | Access token absent/invalide. |
+
+**Paramètres** (corps, JSON)
+
+| Nom | Type | Requis | Description |
+| --- | --- | --- | --- |
+| `avatar` | string | oui | Data URI en base64 (PNG, JPEG ou SVG uniquement - `common.image_validation.validate_image_data_uri`). |
+
+**Workflow**
+
+1. Le client envoie `{ "avatar": "data:image/png;base64,..." }` en `POST`.
+2. Le serveur valide le type MIME/l'encodage, stocke la data URI directement sur `profile_icon`, et la renvoie.
 
 ---
 
@@ -440,7 +532,8 @@ Supprime son propre compte (ou n'importe quel compte, si staff).
 
 1. Le client envoie `DELETE` sur `/api/users/{id}/`.
 2. Vérification de permission comme ci-dessus.
-3. La ligne est supprimée. **Remarque :** toutes les clés étrangères vers `User` utilisent `on_delete=PROTECT` - supprimer un utilisateur qui possède encore des cookbooks/recettes/plannings/messages lèvera une `ProtectedError` (remontée aujourd'hui comme un `500` ; il n'y a aucune étape de réaffectation/cascade avant la suppression).
+3. `UserViewSet.perform_destroy()` appelle `users.services.delete_user_account()`, qui - dans une seule transaction - dénoue chaque clé étrangère `PROTECT` qui bloquerait sinon la suppression, dans l'ordre des dépendances : messages (rédigés par l'utilisateur, ou postés dans un cookbook/une recette qu'il possède), liens de repas planifiés, ingrédients/tags/étapes/favoris des recettes, préférences de cuisine, partages de cookbooks, puis les recettes/plannings/cookbooks de l'utilisateur lui-même, ses lignes `OAuthUser`, et enfin la ligne `User`.
+4. C'est une véritable suppression en cascade, pas une réaffectation : les recettes/plannings/messages créés par l'utilisateur - y compris ceux classés dans un cookbook qu'il possède, même rédigés par quelqu'un d'autre - sont définitivement supprimés avec le compte. Il n'y a pas d'option « conserver en tant qu'orphelin/personnel » ici, contrairement à la suppression d'un cookbook (voir [`DELETE /api/cookbooks/{id}/`](#delete-apicookbooksid), où les recettes/plannings survivent).
 
 ---
 
@@ -575,13 +668,19 @@ Supprime un cookbook. Réservé à l'admin.
 | `401 Unauthorized` | Access token absent/invalide. |
 | `403 Forbidden` | Membre mais pas admin. |
 | `404 Not Found` | Pas membre. |
-| `500` (`ProtectedError`) | Le cookbook a encore des recettes/plannings/messages/partages pointant vers lui via des FK `PROTECT` - rien dans cette route ne les délie au préalable. |
 
 **Paramètres** (chemin)
 
 | Nom | Type | Description |
 | --- | --- | --- |
 | `id` | integer | Id du cookbook. |
+
+**Workflow**
+
+1. `CookbookViewSet.perform_destroy()` dénoue lui-même les FK `PROTECT` du cookbook, dans une seule transaction, si bien que cette route ne renvoie plus jamais de `500` en usage normal :
+   - `Recipe.cookbook` / `Planning.cookbook` sont **vidés, pas mis en cascade** - chaque recette/planning classé dans le cookbook survit en tant qu'élément personnel autonome, possédé par celui qui l'a créé.
+   - Les lignes `SharedUserCookbook` (partages) et `Message` (les deux canaux) du cookbook sont supprimées purement et simplement, car elles n'ont de sens que dans le contexte de ce cookbook.
+2. Cette route n'a pas d'option « supprimer aussi les recettes/plannings ». Pour en supprimer certains en même temps que le cookbook plutôt que de les conserver, il faut supprimer ces recettes/plannings spécifiques au préalable (via leurs propres routes `DELETE`) *avant* d'appeler celle-ci - c'est ce que fait la confirmation de suppression de cookbook du frontend (voir [`docs/frontend.md`](frontend.fr.md#deletecookbookmodal)).
 
 ---
 
@@ -1149,10 +1248,11 @@ supprimer le planning lui-même.
 
 ## 5. Messagerie (`messaging`)
 
-Les messages existent en deux variantes de la même ressource sous-jacente :
-le **canal global** d'un cookbook, et le canal d'une **recette précise** au
-sein de ce cookbook. Il n'existe volontairement aucune route de
-modification - un message ne peut être que posté ou supprimé, jamais édité.
+Les messages existent en trois variantes de la même ressource sous-jacente :
+le **canal global** d'un cookbook, le canal d'une **recette précise**, et le
+canal d'un **planning précis** - ces deux derniers toujours rattachés à un
+cookbook. Il n'existe volontairement aucune route de modification - un
+message ne peut être que posté ou supprimé, jamais édité.
 
 ### `GET /api/cookbooks/{cookbook_pk}/messages/`
 
@@ -1309,4 +1409,64 @@ cookbook ci-dessus, plus le cas `404` de non-correspondance `recipe_pk`.
 | --- | --- | --- |
 | `cookbook_pk` | integer | Id du cookbook. |
 | `recipe_pk` | integer | Id de la recette. |
+| `pk` | integer | Id du message. |
+
+---
+
+### `GET` / `POST /api/cookbooks/{cookbook_pk}/plannings/{planning_pk}/messages/`
+
+Même comportement que les routes de liste/création au niveau cookbook
+ci-dessus, mais rattaché au canal d'un planning précis plutôt qu'au canal
+global du cookbook.
+
+**Auth :** identique aux équivalents au niveau cookbook.
+
+**Codes de statut :** identiques aux deux routes au niveau cookbook
+ci-dessus, plus :
+
+| Statut | Signification |
+| --- | --- |
+| `404 Not Found` | Également renvoyé si `planning_pk` n'appartient pas à `cookbook_pk` (`planning.cookbook_id != cookbook_pk`) - une paire non correspondante ne peut pas servir à divulguer ou mal classer un message. |
+
+**Paramètres** (chemin + query/corps)
+
+| Nom | Emplacement | Type | Description |
+| --- | --- | --- | --- |
+| `cookbook_pk` | chemin | integer | Id du cookbook. |
+| `planning_pk` | chemin | integer | Id du planning ; doit être rangé dans `cookbook_pk`. |
+| `content`, `canal` | corps (`POST` uniquement) | string | Identique à la route au niveau cookbook. |
+| `page` / `page_size` | query (`GET` uniquement) | integer | Pagination. |
+
+---
+
+### `GET /api/cookbooks/{cookbook_pk}/plannings/{planning_pk}/messages/{pk}/`
+
+Récupère un message du canal du planning.
+
+**Auth/codes de statut :** identiques à la route de récupération au niveau
+cookbook ci-dessus, plus le cas `404` de non-correspondance `planning_pk`.
+
+**Paramètres** (chemin)
+
+| Nom | Type | Description |
+| --- | --- | --- |
+| `cookbook_pk` | integer | Id du cookbook. |
+| `planning_pk` | integer | Id du planning. |
+| `pk` | integer | Id du message. |
+
+---
+
+### `DELETE /api/cookbooks/{cookbook_pk}/plannings/{planning_pk}/messages/{pk}/`
+
+Supprime un message du canal du planning.
+
+**Auth/codes de statut :** identiques à la route de suppression au niveau
+cookbook ci-dessus, plus le cas `404` de non-correspondance `planning_pk`.
+
+**Paramètres** (chemin)
+
+| Nom | Type | Description |
+| --- | --- | --- |
+| `cookbook_pk` | integer | Id du cookbook. |
+| `planning_pk` | integer | Id du planning. |
 | `pk` | integer | Id du message. |

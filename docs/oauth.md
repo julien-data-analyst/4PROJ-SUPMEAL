@@ -7,6 +7,7 @@
 - [Overview](#overview)
 - [Routes concerned by OAuth](#routes-concerned-by-oauth)
 - [How the Microsoft flow works](#how-the-microsoft-flow-works)
+- [Linking Microsoft to an existing account](#linking-microsoft-to-an-existing-account)
 - [Environment variables](#environment-variables)
 - [Using it from a frontend](#using-it-from-a-frontend)
 - [Response shape](#response-shape)
@@ -30,6 +31,13 @@ is stored as a row in `OAuth_user`, linked to a `user` row - so a single
 account can be reached through several providers over time, or created
 from scratch the first time someone signs in with one.
 
+A user can also **link** a Microsoft identity to an account they already
+have - typically one created with a local password - after the fact, from
+the settings page, without signing out first. This is a separate route
+from the login one; see
+[Linking Microsoft to an existing account](#linking-microsoft-to-an-existing-account)
+below.
+
 `OAuth_user.provider` is a free-form string, not an enum: today only
 `"microsoft"` is implemented, but nothing in the schema restricts it to
 that value.
@@ -44,13 +52,16 @@ that `code` to the backend.
 
 | Method | Route                        | Auth      | Purpose                                                                          |
 | ------ | ---------------------------- | --------- | --------------------------------------------------------------------------------- |
-| `POST` | `/api/users/oauth/microsoft/` | `AllowAny` | Exchanges a Microsoft authorization `code` for tokens; creates or links the user |
+| `POST` | `/api/users/oauth/microsoft/` | `AllowAny` | Exchanges a Microsoft authorization `code` for tokens; creates or links the user (login/registration) |
+| `POST` | `/api/users/oauth/microsoft/link/` | `IsAuthenticated` | Exchanges a `code` and attaches the Microsoft identity to the **caller's own, already-authenticated** account |
 | `POST` | `/api/users/token/refresh/`  | `AllowAny` | Refreshes an expired access token (shared with password login)                   |
 | `GET`  | `/api/users/me/`             | `IsAuthenticated` | Fetches the profile of whoever the current access token belongs to        |
 
-`/api/users/oauth/microsoft/` is the only OAuth-specific route. Everything
-after it (refreshing tokens, calling `/me/`, etc.) is indistinguishable
-from a normal password login - both flows converge on the same JWT pair.
+`/api/users/oauth/microsoft/` and `/api/users/oauth/microsoft/link/` are the
+only two OAuth-specific routes. Everything after them (refreshing tokens,
+calling `/me/`, etc.) is indistinguishable from a normal password login -
+every flow converges on the same JWT pair (linking doesn't even issue a new
+one - see below).
 
 ## How the Microsoft flow works
 
@@ -97,6 +108,83 @@ Step by step, on the backend side (`backend/users/oauth_microsoft.py`):
 
 If the code is invalid/expired, or the Microsoft account has no email, the
 view returns `400 Bad Request` before any database write happens.
+
+## Linking Microsoft to an existing account
+
+Besides signing in, an **already-authenticated** user can attach their
+Microsoft identity to the very account they're logged into - e.g. someone
+who registered with a local password and now wants "Sign in with
+Microsoft" to work too. This is the settings page's "Lier mon compte
+Microsoft" action, backed by a separate route,
+`POST /api/users/oauth/microsoft/link/` (`LinkMicrosoftOAuthView`), and a
+separate service function, `link_microsoft_account()` in
+`backend/users/oauth_microsoft.py`.
+
+It reuses the exact same code-exchange/profile-fetch mechanics as the login
+flow (`exchange_code_for_token`, `fetch_microsoft_profile`,
+`has_microsoft_photo`), but everything after that differs:
+
+| | Login (`/oauth/microsoft/`) | Link (`/oauth/microsoft/link/`) |
+| --- | --- | --- |
+| **Auth required** | `AllowAny` | `IsAuthenticated` |
+| **Which user** | Matched/created by the profile's email | Always `request.user` - never matched/created by email |
+| **On success** | Issues a fresh JWT pair | Issues **no tokens** - the caller's existing session keeps working as-is |
+| **Side effect on the account** | None beyond creating it | `user.email` is overwritten with the Microsoft profile's email, and `user.set_unusable_password()` is called |
+
+That last row matters: **linking is one-way and destructive to the local
+password**. Once linked, the account can only sign in through Microsoft -
+the local password stops working entirely, it isn't kept as a fallback.
+The frontend's confirmation modal (`pages/settings.vue`) says exactly this
+before starting the redirect.
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant Frontend as Frontend (Nuxt, /settings)
+    participant Backend as Backend (/api/users/oauth/microsoft/link/)
+    participant MS as Microsoft identity platform
+    participant Graph as Microsoft Graph
+
+    Browser->>MS: 1. Redirect to /oauth2/v2.0/authorize?...&state=link
+    MS->>Browser: 2. User logs in / consents
+    MS->>Frontend: 3. Redirect to AZURE_REDIRECT_URI?code=...&state=link
+    Frontend->>Backend: 4. POST { code }, Authorization: Bearer <access> (current session)
+    Backend->>MS: 5. Exchange code for access_token (MSAL, uses AZURE_CLIENT_SECRET)
+    MS-->>Backend: access_token
+    Backend->>Graph: 6. GET /v1.0/me (Bearer access_token)
+    Graph-->>Backend: displayName, givenName, surname, mail, userPrincipalName
+    Backend->>Graph: 7. GET /v1.0/me/photo/$value (existence check only)
+    Graph-->>Backend: 200 (has photo) or 404
+    Backend->>Backend: 8. request.user.email = profile email; set_unusable_password(); update_or_create OAuthUser(provider="microsoft")
+    Backend-->>Frontend: 9. { user, detail }
+    Frontend->>Frontend: 10. Update cached user - no new tokens to store, the session is unchanged
+```
+
+Since linking reuses the same Azure app registration and redirect URI as
+login (there's no second one to configure), the frontend needs a way to
+tell a login attempt from a link attempt apart on the shared callback page.
+It does this with the OAuth `state` parameter, which Microsoft round-trips
+verbatim:
+
+1. `useOAuth().startOAuth("microsoft", mode)` (`frontend/app/composables/useOAuth.ts`)
+   appends `state=login` or `state=link` to the authorize URL depending on
+   which action triggered it - the settings page calls it with `"link"`,
+   everywhere else defaults to `"login"`.
+2. `finishOAuth("microsoft")`, called from the shared callback page
+   (`pages/connect/microsoft/callback.vue`), reads `route.query.state` back
+   and branches: `"link"` posts to `/oauth/microsoft/link/` and calls
+   `updateUser()` (no tokens to store); anything else posts to
+   `/oauth/microsoft/` and calls `setSession()` as usual.
+3. On success, the callback page redirects to `/settings?linked=microsoft`
+   (a login instead redirects to `/home`); a `linked=microsoft` query param
+   is what triggers the "Compte Microsoft lié avec succès." toast on
+   `pages/settings.vue`.
+
+**Fails with `400 Bad Request`** if `code` is missing, the exchange with
+Microsoft fails the same way it can for login, the Graph profile has no
+email, **or that email already belongs to a *different* existing
+account** (`User.objects.exclude(pk=user.pk).filter(email__iexact=email).exists()`)
+- linking can't be used to silently take over someone else's account.
 
 ## Environment variables
 
@@ -161,10 +249,17 @@ const { user, access, refresh } = await res.json();
 to `/api/users/token/refresh/` to get a new one - this part is not
 provider-specific.
 
+This three-step shape is also what a **linking** integration reuses -
+same redirect, same callback page - just gated behind an existing session
+and posting to a different route with no tokens to store afterwards. See
+[Linking Microsoft to an existing account](#linking-microsoft-to-an-existing-account)
+for the exact differences and how the frontend tells the two attempts
+apart on the shared callback page.
+
 ## Response shape
 
-Success (`200 OK`), identical envelope to `/api/users/login/` and
-`/api/users/register/`:
+**Login (`/oauth/microsoft/`), success (`200 OK`)** - identical envelope to
+`/api/users/login/` and `/api/users/register/`:
 
 ```json
 {
@@ -175,6 +270,7 @@ Success (`200 OK`), identical envelope to `/api/users/login/` and
     "last_name": "Doe",
     "email": "jane.doe@contoso.com",
     "profile_icon": "https://graph.microsoft.com/v1.0/me/photo/$value",
+    "is_oauth": true,
     "created_at": "2026-07-25T10:00:00Z",
     "updated_at": "2026-07-25T10:00:00Z"
   },
@@ -183,9 +279,36 @@ Success (`200 OK`), identical envelope to `/api/users/login/` and
 }
 ```
 
+**Link (`/oauth/microsoft/link/`), success (`200 OK`)** - no token pair
+(the caller's existing session is untouched), just the updated user plus a
+confirmation message:
+
+```json
+{
+  "user": {
+    "id": 42,
+    "username": "jane.doe",
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "email": "jane.doe@contoso.com",
+    "profile_icon": "https://graph.microsoft.com/v1.0/me/photo/$value",
+    "is_oauth": true,
+    "created_at": "2026-07-25T10:00:00Z",
+    "updated_at": "2026-07-25T10:00:00Z"
+  },
+  "detail": "Microsoft account linked successfully. You can only sign in with Microsoft from now on."
+}
+```
+
+`is_oauth` (`UserSerializer.get_is_oauth`, `user.oauth_accounts.exists()`)
+is what the frontend checks to decide whether to show password-related
+settings fields versus the "link Microsoft" call to action - see
+`pages/settings.vue`.
+
 ## Error handling
 
-`400 Bad Request` in three cases, all returned as `{ "detail": "<message>" }`:
+**Login (`/oauth/microsoft/`)** - `400 Bad Request` in three cases, all
+returned as `{ "detail": "<message>" }`:
 
 - `code` missing from the request body (serializer validation).
 - Microsoft rejects the code exchange (expired/already-used code, wrong
@@ -193,7 +316,18 @@ Success (`200 OK`), identical envelope to `/api/users/login/` and
 - The Graph profile has neither `mail` nor `userPrincipalName` to key the
   account on.
 
+**Link (`/oauth/microsoft/link/`)** - the same three cases, plus:
+
+- `401 Unauthorized` if there's no valid access token - unlike login, this
+  route requires an existing session.
+- `400 Bad Request` if the Microsoft account's email already belongs to a
+  **different** existing account (`{ "detail": "This Microsoft account's
+  email is already used by another account." }`) - prevents linking from
+  being used to silently take over someone else's account.
+
 ## What gets written to the database
+
+### Login / registration (`/oauth/microsoft/`)
 
 | Field                    | Source                                                    |
 | ------------------------- | ---------------------------------------------------------- |
@@ -220,6 +354,27 @@ external-id column), so if an account with the same email already exists
 (local or via another provider), the Microsoft identity is linked to it
 instead of creating a duplicate user.
 
+### Linking an existing account (`/oauth/microsoft/link/`)
+
+No new `User` row is ever created here - `request.user` is updated in
+place:
+
+| Field                    | Source                                                    |
+| ------------------------- | ---------------------------------------------------------- |
+| `User.username`           | **Untouched** - unlike login/registration, linking never derives a username from the Microsoft profile |
+| `User.first_name`/`last_name` | **Untouched**                                          |
+| `User.email`               | Overwritten with Graph `mail` (fallback: `userPrincipalName`) |
+| `User.password`           | Overwritten to unusable (`set_unusable_password()`) - any previous local password stops working |
+| `OAuthUser.provider`      | `"microsoft"` (`update_or_create`d - re-linking after unlinking just refreshes the existing row rather than duplicating it) |
+| `OAuthUser.provider_url`  | `AZURE_AUTHORITY`                                           |
+| `OAuthUser.profile_icon`  | Graph photo URL if the account has a photo, else empty (`User.profile_icon` itself is **not** touched by linking) |
+| `OAuthUser.domain`        | Domain part of the (new) email                               |
+
+Because `User.email` is overwritten, a subsequent Microsoft *login* with
+this same Microsoft account will match this user by email as expected -
+but a future *local* password reset/change flow keyed on the old email
+address would no longer find this account.
+
 ## Adding another provider
 
 Because `OAuthUser.provider` is a plain string, adding Google/GitHub/etc.
@@ -238,10 +393,14 @@ share the same "match by email, else create" behavior.
 
 ## Tests
 
-`backend/tests/users/microsoft_oauth_test.py` covers the route end to end
+`backend/tests/users/microsoft_oauth_test.py` covers both routes end to end
 with Microsoft mocked out (`_confidential_client` and `requests.get`
-patched) - no real network calls or Microsoft account are needed. Run it
-with:
+patched) - no real network calls or Microsoft account are needed. The
+linking-specific cases (`test_link_microsoft_requires_authentication`,
+`test_local_user_can_link_microsoft_account`,
+`test_linking_microsoft_account_already_used_by_another_user_fails`,
+`test_link_microsoft_rejects_get_requests`) live in the same file, below
+the login/registration ones. Run it with:
 
 ```bash
 docker compose -f docker-compose.dev.yml exec backend uv run pytest tests/users/microsoft_oauth_test.py -v
