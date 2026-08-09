@@ -2,6 +2,8 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
+from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 from common.image_validation import validate_image_data_uri
 
@@ -153,3 +155,20 @@ class LoginSerializer(serializers.Serializer):
 
         attrs["user"] = user
         return attrs
+
+
+class SafeTokenRefreshSerializer(TokenRefreshSerializer):
+    """``TokenRefreshSerializer`` that rejects tokens for since-deleted users cleanly.
+
+    The stock serializer looks up the user for the token's ``user_id`` claim
+    but never catches ``User.DoesNotExist`` - if the account was removed (or
+    the database was reset) after the refresh token was issued, that raw
+    lookup bubbles up as an unhandled 500 instead of a normal 401. This
+    treats that case the same as any other invalid token.
+    """
+
+    def validate(self, attrs: dict) -> dict:
+        try:
+            return super().validate(attrs)
+        except User.DoesNotExist:
+            raise InvalidToken("No account found for this token.")

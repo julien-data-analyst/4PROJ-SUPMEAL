@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken, Token
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from .models import User
 from .oauth_microsoft import (
@@ -28,6 +29,7 @@ from .serializers import (
     LoginSerializer,
     LogoutSerializer,
     MicrosoftOAuthSerializer,
+    SafeTokenRefreshSerializer,
     UserRegisterSerializer,
     UserSerializer,
 )
@@ -126,6 +128,12 @@ class LoginView(APIView):
             "user"
         ]
         return Response({"user": UserSerializer(user).data, **_tokens_for(user)})
+
+
+class SafeTokenRefreshView(TokenRefreshView):
+    """``TokenRefreshView`` using ``SafeTokenRefreshSerializer`` - see there for why."""
+
+    serializer_class = SafeTokenRefreshSerializer
 
 
 class MicrosoftOAuthView(APIView):

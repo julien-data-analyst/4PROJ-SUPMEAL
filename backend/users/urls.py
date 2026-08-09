@@ -1,6 +1,5 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     ChangeAvatarView,
@@ -11,6 +10,7 @@ from .views import (
     LogoutView,
     MicrosoftOAuthView,
     RegisterView,
+    SafeTokenRefreshView,
     UserViewSet,
 )
 
@@ -26,6 +26,6 @@ urlpatterns = [
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("change-email/", ChangeEmailView.as_view(), name="change-email"),
     path("change-avatar/", ChangeAvatarView.as_view(), name="change-avatar"),
-    path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("token/refresh/", SafeTokenRefreshView.as_view(), name="token-refresh"),
     path("", include(router.urls)),
 ]
