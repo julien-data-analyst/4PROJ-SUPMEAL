@@ -7,6 +7,7 @@
 - [Vue d'ensemble](#vue-densemble)
 - [Routes concernées par OAuth](#routes-concernées-par-oauth)
 - [Fonctionnement du flux Microsoft](#fonctionnement-du-flux-microsoft)
+- [Lier Microsoft à un compte existant](#lier-microsoft-à-un-compte-existant)
 - [Variables d'environnement](#variables-denvironnement)
 - [Utilisation depuis un frontend](#utilisation-depuis-un-frontend)
 - [Format de la réponse](#format-de-la-réponse)
@@ -35,6 +36,13 @@ la première connexion avec l'un d'eux.
 `"microsoft"` est implémenté aujourd'hui, mais rien dans le schéma ne
 restreint le champ à cette valeur.
 
+Un utilisateur peut aussi **lier** une identité Microsoft à un compte qu'il
+possède déjà - typiquement un compte créé avec un mot de passe local -
+après coup, depuis la page de paramètres, sans avoir à se déconnecter au
+préalable. C'est une route distincte de celle de connexion ; voir
+[Lier Microsoft à un compte existant](#lier-microsoft-à-un-compte-existant)
+ci-dessous.
+
 Comme le secret client confidentiel (`AZURE_CLIENT_SECRET`) ne doit jamais
 atteindre le navigateur, **c'est le backend - et non le frontend - qui
 effectue l'échange du code d'autorisation avec Microsoft**. Le frontend n'a
@@ -45,14 +53,16 @@ que trois tâches : envoyer l'utilisateur vers Microsoft, récupérer le
 
 | Méthode | Route                        | Auth      | But                                                                          |
 | ------ | ---------------------------- | --------- | --------------------------------------------------------------------------------- |
-| `POST` | `/api/users/oauth/microsoft/` | `AllowAny` | Échange un `code` d'autorisation Microsoft contre des tokens ; crée ou relie l'utilisateur |
+| `POST` | `/api/users/oauth/microsoft/` | `AllowAny` | Échange un `code` d'autorisation Microsoft contre des tokens ; crée ou relie l'utilisateur (connexion/inscription) |
+| `POST` | `/api/users/oauth/microsoft/link/` | `IsAuthenticated` | Échange un `code` et rattache l'identité Microsoft au compte **déjà authentifié de l'appelant** |
 | `POST` | `/api/users/token/refresh/`  | `AllowAny` | Rafraîchit un access token expiré (partagé avec la connexion par mot de passe) |
 | `GET`  | `/api/users/me/`             | `IsAuthenticated` | Récupère le profil du propriétaire de l'access token courant        |
 
-`/api/users/oauth/microsoft/` est la seule route spécifique à OAuth. Tout ce
-qui suit (rafraîchir les tokens, appeler `/me/`, etc.) est indiscernable
-d'une connexion classique par mot de passe - les deux flux convergent vers
-la même paire de JWT.
+`/api/users/oauth/microsoft/` et `/api/users/oauth/microsoft/link/` sont les
+deux seules routes spécifiques à OAuth. Tout ce qui suit (rafraîchir les
+tokens, appeler `/me/`, etc.) est indiscernable d'une connexion classique
+par mot de passe - chaque flux converge vers la même paire de JWT (la
+liaison n'en émet même pas de nouvelle - voir plus bas).
 
 ## Fonctionnement du flux Microsoft
 
@@ -100,6 +110,88 @@ sequenceDiagram
 
 Si le code est invalide/expiré, ou si le compte Microsoft n'a pas d'email,
 la vue renvoie `400 Bad Request` avant toute écriture en base de données.
+
+## Lier Microsoft à un compte existant
+
+En plus de se connecter, un utilisateur **déjà authentifié** peut rattacher
+son identité Microsoft au compte même sur lequel il est connecté - par
+exemple quelqu'un qui s'est inscrit avec un mot de passe local et veut
+maintenant que « Se connecter avec Microsoft » fonctionne aussi. C'est
+l'action « Lier mon compte Microsoft » de la page de paramètres, adossée à
+une route séparée, `POST /api/users/oauth/microsoft/link/`
+(`LinkMicrosoftOAuthView`), et à une fonction de service séparée,
+`link_microsoft_account()` dans `backend/users/oauth_microsoft.py`.
+
+Elle réutilise exactement la même mécanique d'échange de code/récupération
+de profil que le flux de connexion (`exchange_code_for_token`,
+`fetch_microsoft_profile`, `has_microsoft_photo`), mais tout ce qui suit
+diffère :
+
+| | Connexion (`/oauth/microsoft/`) | Liaison (`/oauth/microsoft/link/`) |
+| --- | --- | --- |
+| **Auth requise** | `AllowAny` | `IsAuthenticated` |
+| **Quel utilisateur** | Apparié/créé par l'email du profil | Toujours `request.user` - jamais apparié/créé par email |
+| **En cas de succès** | Émet une nouvelle paire de JWT | N'émet **aucun token** - la session existante de l'appelant continue de fonctionner telle quelle |
+| **Effet de bord sur le compte** | Aucun au-delà de sa création | `user.email` est écrasé par l'email du profil Microsoft, et `user.set_unusable_password()` est appelé |
+
+Cette dernière ligne est importante : **la liaison est à sens unique et
+destructive pour le mot de passe local**. Une fois lié, le compte ne peut
+plus se connecter que via Microsoft - le mot de passe local cesse de
+fonctionner entièrement, il n'est pas conservé comme solution de repli. La
+fenêtre de confirmation du frontend (`pages/settings.vue`) l'indique
+explicitement avant de démarrer la redirection.
+
+```mermaid
+sequenceDiagram
+    participant Browser as Navigateur
+    participant Frontend as Frontend (Nuxt, /settings)
+    participant Backend as Backend (/api/users/oauth/microsoft/link/)
+    participant MS as Plateforme d'identite Microsoft
+    participant Graph as Microsoft Graph
+
+    Browser->>MS: 1. Redirection vers /oauth2/v2.0/authorize?...&state=link
+    MS->>Browser: 2. L'utilisateur se connecte / consent
+    MS->>Frontend: 3. Redirection vers AZURE_REDIRECT_URI?code=...&state=link
+    Frontend->>Backend: 4. POST { code }, Authorization: Bearer <access> (session courante)
+    Backend->>MS: 5. Echange du code contre un access_token (MSAL, utilise AZURE_CLIENT_SECRET)
+    MS-->>Backend: access_token
+    Backend->>Graph: 6. GET /v1.0/me (Bearer access_token)
+    Graph-->>Backend: displayName, givenName, surname, mail, userPrincipalName
+    Backend->>Graph: 7. GET /v1.0/me/photo/$value (verification d'existence uniquement)
+    Graph-->>Backend: 200 (a une photo) ou 404
+    Backend->>Backend: 8. request.user.email = email du profil ; set_unusable_password() ; update_or_create OAuthUser(provider="microsoft")
+    Backend-->>Frontend: 9. { user, detail }
+    Frontend->>Frontend: 10. Met a jour l'utilisateur en cache - aucun nouveau token a stocker, la session est inchangee
+```
+
+Comme la liaison réutilise le même enregistrement d'app Azure et le même
+redirect URI que la connexion (il n'y en a pas de second à configurer), le
+frontend a besoin d'un moyen de distinguer une tentative de connexion d'une
+tentative de liaison sur la page de callback partagée. Il fait cela avec le
+paramètre OAuth `state`, que Microsoft renvoie tel quel :
+
+1. `useOAuth().startOAuth("microsoft", mode)`
+   (`frontend/app/composables/useOAuth.ts`) ajoute `state=login` ou
+   `state=link` à l'URL d'autorisation selon l'action qui l'a déclenché -
+   la page de paramètres l'appelle avec `"link"`, partout ailleurs c'est
+   `"login"` par défaut.
+2. `finishOAuth("microsoft")`, appelé depuis la page de callback partagée
+   (`pages/connect/microsoft/callback.vue`), relit `route.query.state` et
+   fait un branchement : `"link"` envoie un `POST` à
+   `/oauth/microsoft/link/` et appelle `updateUser()` (rien à stocker) ;
+   toute autre valeur envoie un `POST` à `/oauth/microsoft/` et appelle
+   `setSession()` comme d'habitude.
+3. En cas de succès, la page de callback redirige vers
+   `/settings?linked=microsoft` (une connexion redirige elle vers `/home`) ;
+   le paramètre `linked=microsoft` est ce qui déclenche le toast « Compte
+   Microsoft lié avec succès. » sur `pages/settings.vue`.
+
+**Échoue avec `400 Bad Request`** si `code` est manquant, si l'échange avec
+Microsoft échoue de la même façon que pour la connexion, si le profil Graph
+n'a pas d'email, **ou si cet email appartient déjà à un compte *différent***
+(`User.objects.exclude(pk=user.pk).filter(email__iexact=email).exists()`) -
+la liaison ne peut pas servir à s'approprier silencieusement le compte de
+quelqu'un d'autre.
 
 ## Variables d'environnement
 
@@ -166,10 +258,18 @@ par mot de passe** (ex. store Pinia + stockage sécurisé), et joindre
 expire, envoyer `refresh` en `POST` à `/api/users/token/refresh/` pour en
 obtenir un nouveau - cette partie n'est pas spécifique au fournisseur.
 
+Cette structure en trois étapes est aussi celle que réutilise une
+intégration de **liaison** - même redirection, même page de callback -
+simplement conditionnée par une session existante, postant vers une route
+différente, sans token à stocker ensuite. Voir
+[Lier Microsoft à un compte existant](#lier-microsoft-à-un-compte-existant)
+pour le détail des différences et la façon dont le frontend distingue les
+deux tentatives sur la page de callback partagée.
+
 ## Format de la réponse
 
-Succès (`200 OK`), enveloppe identique à `/api/users/login/` et
-`/api/users/register/` :
+**Connexion (`/oauth/microsoft/`), succès (`200 OK`)** - enveloppe
+identique à `/api/users/login/` et `/api/users/register/` :
 
 ```json
 {
@@ -180,6 +280,7 @@ Succès (`200 OK`), enveloppe identique à `/api/users/login/` et
     "last_name": "Doe",
     "email": "jane.doe@contoso.com",
     "profile_icon": "https://graph.microsoft.com/v1.0/me/photo/$value",
+    "is_oauth": true,
     "created_at": "2026-07-25T10:00:00Z",
     "updated_at": "2026-07-25T10:00:00Z"
   },
@@ -188,10 +289,36 @@ Succès (`200 OK`), enveloppe identique à `/api/users/login/` et
 }
 ```
 
+**Liaison (`/oauth/microsoft/link/`), succès (`200 OK`)** - pas de paire de
+tokens (la session existante de l'appelant n'est pas touchée), juste
+l'utilisateur mis à jour et un message de confirmation :
+
+```json
+{
+  "user": {
+    "id": 42,
+    "username": "jane.doe",
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "email": "jane.doe@contoso.com",
+    "profile_icon": "https://graph.microsoft.com/v1.0/me/photo/$value",
+    "is_oauth": true,
+    "created_at": "2026-07-25T10:00:00Z",
+    "updated_at": "2026-07-25T10:00:00Z"
+  },
+  "detail": "Microsoft account linked successfully. You can only sign in with Microsoft from now on."
+}
+```
+
+`is_oauth` (`UserSerializer.get_is_oauth`, `user.oauth_accounts.exists()`)
+est ce que le frontend vérifie pour décider d'afficher les champs de
+paramètres liés au mot de passe ou l'appel à l'action « lier Microsoft » -
+voir `pages/settings.vue`.
+
 ## Gestion des erreurs
 
-`400 Bad Request` dans trois cas, tous renvoyés sous la forme
-`{ "detail": "<message>" }` :
+**Connexion (`/oauth/microsoft/`)** - `400 Bad Request` dans trois cas,
+tous renvoyés sous la forme `{ "detail": "<message>" }` :
 
 - `code` absent du corps de la requête (validation du serializer).
 - Microsoft rejette l'échange du code (code expiré/déjà utilisé, mauvais
@@ -199,7 +326,18 @@ Succès (`200 OK`), enveloppe identique à `/api/users/login/` et
 - Le profil Graph n'a ni `mail` ni `userPrincipalName` pour identifier le
   compte.
 
+**Liaison (`/oauth/microsoft/link/`)** - les trois mêmes cas, plus :
+
+- `401 Unauthorized` en l'absence d'access token valide - contrairement à
+  la connexion, cette route requiert une session existante.
+- `400 Bad Request` si l'email du compte Microsoft appartient déjà à un
+  compte **différent** (`{ "detail": "This Microsoft account's email is
+  already used by another account." }`) - empêche la liaison de servir à
+  s'approprier silencieusement le compte de quelqu'un d'autre.
+
 ## Ce qui est écrit en base de données
+
+### Connexion / inscription (`/oauth/microsoft/`)
 
 | Champ                    | Source                                                    |
 | ------------------------- | ---------------------------------------------------------- |
@@ -227,6 +365,27 @@ colonne d'id externe séparée), donc si un compte avec le même email existe
 déjà (local ou via un autre fournisseur), l'identité Microsoft lui est liée
 au lieu de créer un utilisateur en double.
 
+### Liaison à un compte existant (`/oauth/microsoft/link/`)
+
+Aucune nouvelle ligne `User` n'est jamais créée ici - `request.user` est
+mis à jour sur place :
+
+| Champ                    | Source                                                    |
+| ------------------------- | ---------------------------------------------------------- |
+| `User.username`           | **Non touché** - contrairement à la connexion/inscription, la liaison ne dérive jamais un nom d'utilisateur du profil Microsoft |
+| `User.first_name`/`last_name` | **Non touchés**                                        |
+| `User.email`               | Écrasé par `mail` de Graph (repli sur `userPrincipalName`) |
+| `User.password`           | Écrasé, rendu inutilisable (`set_unusable_password()`) - tout mot de passe local précédent cesse de fonctionner |
+| `OAuthUser.provider`      | `"microsoft"` (`update_or_create`, donc relier après avoir délié se contente de rafraîchir la ligne existante plutôt que de la dupliquer) |
+| `OAuthUser.provider_url`  | `AZURE_AUTHORITY`                                           |
+| `OAuthUser.profile_icon`  | URL de photo Graph si le compte a une photo, sinon vide (`User.profile_icon` lui-même n'est **pas** touché par la liaison) |
+| `OAuthUser.domain`        | Partie domaine du (nouvel) email                             |
+
+Comme `User.email` est écrasé, une future *connexion* Microsoft avec ce
+même compte Microsoft appariera correctement cet utilisateur par email -
+mais un futur flux de réinitialisation/changement de mot de passe local
+basé sur l'ancienne adresse email ne retrouverait plus ce compte.
+
 ## Ajouter un autre fournisseur
 
 Comme `OAuthUser.provider` est une simple chaîne, ajouter Google/GitHub/etc.
@@ -247,10 +406,15 @@ créer ».
 
 ## Tests
 
-`backend/tests/users/microsoft_oauth_test.py` couvre la route de bout en
-bout avec Microsoft simulé (`_confidential_client` et `requests.get`
-patchés) - aucun appel réseau réel ni compte Microsoft n'est nécessaire.
-L'exécuter avec :
+`backend/tests/users/microsoft_oauth_test.py` couvre les deux routes de
+bout en bout avec Microsoft simulé (`_confidential_client` et
+`requests.get` patchés) - aucun appel réseau réel ni compte Microsoft n'est
+nécessaire. Les cas spécifiques à la liaison
+(`test_link_microsoft_requires_authentication`,
+`test_local_user_can_link_microsoft_account`,
+`test_linking_microsoft_account_already_used_by_another_user_fails`,
+`test_link_microsoft_rejects_get_requests`) se trouvent dans le même
+fichier, après ceux de connexion/inscription. L'exécuter avec :
 
 ```bash
 docker compose -f docker-compose.dev.yml exec backend uv run pytest tests/users/microsoft_oauth_test.py -v

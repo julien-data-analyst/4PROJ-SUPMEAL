@@ -45,6 +45,7 @@ erDiagram
     user ||--o{ OAuth_user : "se connecte via"
     user ||--o{ shared_user_cookbook : "recoit un acces via"
     user ||--o{ user_preferences : possede
+    user ||--o{ favorite_recipe : "met en favori"
 
     cookbook ||--o{ recipe : contient
     cookbook ||--o{ planning : encadre
@@ -56,15 +57,18 @@ erDiagram
     recipe ||--o{ recipe_tag : "est etiquetee par"
     recipe ||--o{ recipe_planning : "est planifiee via"
     recipe ||--o{ message : "est discutee dans"
+    recipe ||--o{ favorite_recipe : "est mise en favori via"
 
     ingredient ||--o{ recipe_ingredient : "est utilise dans"
     tag ||--o{ recipe_tag : etiquette
     tag ||--o{ user_preferences : "est prefere via"
     planning ||--o{ recipe_planning : planifie
+    planning ||--o{ message : "est discute dans"
 
     cookbook {
         int id PK
         text name
+        text icon
         int creator_id FK
         timestamp created_at
         timestamp updated_at
@@ -151,6 +155,7 @@ erDiagram
         int author_id FK
         int cookbook_id FK
         int recipe_id FK
+        int planning_id FK
         timestamp created_at
     }
 
@@ -168,6 +173,8 @@ erDiagram
     planning {
         int id PK
         text name
+        text icon
+        text type
         int creator_id FK
         int cookbook_id FK
         timestamp created_at
@@ -188,6 +195,12 @@ erDiagram
     user_preferences {
         int user_id PK,FK
         int tag_id PK,FK
+        timestamp created_at
+    }
+
+    favorite_recipe {
+        int user_id PK,FK
+        int recipe_id PK,FK
         timestamp created_at
     }
 ```
@@ -236,6 +249,7 @@ partagée avec d'autres.
 | ------------- | --------- | ----------- | ------------ |
 | `id`          | INTEGER   | PK          |              |
 | `name`        | TEXT      | not null    |              |
+| `icon`        | TEXT      | null, défaut : icône intégrée | data URI/base64 ; ne fait pas partie du schéma d'origine, ajoutée par-dessus uniquement pour l'affichage |
 | `creator_id`  | INTEGER   | not null    | → `user.id`  |
 | `created_at`  | TIMESTAMP | not null    |              |
 | `updated_at`  | TIMESTAMP | not null    |              |
@@ -354,15 +368,35 @@ composite.
 | `tag_id`      | INTEGER   | PK          | → `tag.id`    |
 | `created_at`  | TIMESTAMP | not null    |              |
 
+#### `favorite_recipe`
+
+Indique qu'un utilisateur a mis une recette en favori, pour un affichage
+personnalisé des recettes (ex. filtre « mes favoris »). Ne fait pas partie
+du schéma SQL d'origine - ajoutée par-dessus, sur le même modèle que
+`user_preferences` (clé primaire composite, pas de `updated_at`).
+
+| Colonne       | Type      | Contraintes | Note          |
+| ------------- | --------- | ----------- | -------------- |
+| `user_id`     | INTEGER   | PK          | → `user.id`     |
+| `recipe_id`   | INTEGER   | PK          | → `recipe.id`   |
+| `created_at`  | TIMESTAMP | not null    |                |
+
 #### `planning`
 
 Un plan de repas nommé, créé par un utilisateur, éventuellement rattaché à un
-cookbook.
+cookbook. `type` et `icon` ne font pas partie du schéma SQL d'origine,
+ajoutés par-dessus : `type` distingue un plan sur une seule journée
+(`journalier`, jusqu'à 6 repas - un créneau `lunch` × `type` par jour) d'un
+plan couvrant une semaine complète (`hebdomadaire`, jusqu'à 42 repas), et
+`icon` reprend le même principe que `cookbook.icon` (affichage uniquement,
+icône intégrée par défaut).
 
 | Colonne        | Type      | Contraintes | Note              |
 | -------------- | --------- | ----------- | ------------------ |
 | `id`           | INTEGER   | PK          |                    |
 | `name`         | TEXT      | not null    |                    |
+| `icon`         | TEXT      | null, défaut : icône intégrée | data URI/base64 |
+| `type`         | TEXT      | not null, défaut `'hebdomadaire'` | `journalier` ou `hebdomadaire` |
 | `creator_id`   | INTEGER   | not null    | → `user.id`         |
 | `cookbook_id`  | INTEGER   | null        | → `cookbook.id`     |
 | `created_at`   | TIMESTAMP | not null    |                    |
@@ -393,10 +427,15 @@ plus une recette par créneau jour/moment-du-repas/plat.
 #### `message`
 
 Un message posté par un utilisateur, toujours rattaché à un cookbook.
-`recipe_id` est nullable : un message sans `recipe_id` appartient au canal
-global du cookbook, tandis qu'un message avec `recipe_id` défini appartient
-au canal de cette recette précise (cette recette doit elle-même être rangée
-dans `cookbook_id`).
+`recipe_id` et `planning_id` sont tous deux nullables **et mutuellement
+exclusifs** (imposé par une contrainte `CHECK`,
+`message_not_both_recipe_and_planning`) : un message sans aucun des deux
+appartient au canal global du cookbook, un message avec `recipe_id` défini
+appartient au canal de cette recette précise, et un message avec
+`planning_id` défini appartient au canal de ce planning précis (la
+recette/le planning doit lui-même être rangé dans `cookbook_id`). Les
+messages n'ont pas de `updated_at` - ils ne peuvent être que postés ou
+supprimés, jamais modifiés.
 
 | Colonne        | Type      | Contraintes | Note            |
 | -------------- | --------- | ----------- | ---------------- |
@@ -405,7 +444,8 @@ dans `cookbook_id`).
 | `canal`        | TEXT      | not null    | canal de conversation |
 | `author_id`    | INTEGER   | not null    | → `user.id`       |
 | `cookbook_id`  | INTEGER   | not null    | → `cookbook.id`   |
-| `recipe_id`    | INTEGER   | null        | → `recipe.id`     |
+| `recipe_id`    | INTEGER   | null        | → `recipe.id` ; mutuellement exclusif avec `planning_id` |
+| `planning_id`  | INTEGER   | null        | → `planning.id` ; mutuellement exclusif avec `recipe_id` |
 | `created_at`   | TIMESTAMP | not null    |                  |
 
 Toutes les clés étrangères sont déclarées `ON UPDATE NO ACTION ON DELETE NO
@@ -427,12 +467,14 @@ Le schéma ci-dessus est implémenté sous forme de cinq apps Django dans
 | ------------ | ------------------------------------------------------------ |
 | `users`      | Comptes (`User`, l'`AUTH_USER_MODEL` du projet) et identités OAuth (`OAuthUser`) |
 | `cookbooks`  | `Cookbook` et le partage de cookbooks (`SharedUserCookbook`)       |
-| `recipes`    | `Recipe` et tout ce qui s'y rattache : `Ingredient`, `Tag`, `Step`, plus les tables de jointure `RecipeIngredient` / `RecipeTag` / `UserPreference` |
+| `recipes`    | `Recipe` et tout ce qui s'y rattache : `Ingredient`, `Tag`, `Step`, plus les tables de jointure `RecipeIngredient` / `RecipeTag` / `UserPreference` / `FavoriteRecipe` |
 | `planning`   | `Planning` et `RecipePlanning`                              |
 | `messaging`  | `Message`                                                    |
 
 Ordre des dépendances (qui importe/référence qui) : `users` → `cookbooks` →
-`recipes` → `planning` / `messaging`. `users` elle-même ne dépend de rien
+`recipes` → `planning` → `messaging` (`messaging.models` importe à la fois
+`recipes.models.Recipe` et `planning.models.Planning`, puisqu'un message
+peut être rattaché à l'un ou l'autre). `users` elle-même ne dépend de rien
 d'autre dans le projet - cela a de l'importance pour les migrations, voir
 [plus bas](#dépendances-circulaires-entre-apps-piège-des-clés-composites).
 
@@ -450,6 +492,7 @@ d'autre dans le projet - cela a de l'importance pour les migrations, voir
 | `tag`                      | `recipes`   | `Tag`                 | `recipes_tag`                     |
 | `recipe_tag`               | `recipes`   | `RecipeTag`           | `recipes_recipetag`               |
 | `user_preferences`         | `recipes`   | `UserPreference`      | `recipes_userpreference`          |
+| `favorite_recipe`          | `recipes`   | `FavoriteRecipe`      | `recipes_favoriterecipe`          |
 | `step`                     | `recipes`   | `Step`                | `recipes_step`                    |
 | `planning`                 | `planning`  | `Planning`            | `planning_planning`               |
 | `recipe_planning`          | `planning`  | `RecipePlanning`      | `planning_recipeplanning`         |
@@ -487,8 +530,9 @@ suppression en cascade ou de mettre silencieusement la référence à `null`.
 ### Clés primaires composites
 
 La plupart des tables de jointure SQL (`recipe_tag`, `recipe_ingredient`,
-`shared_user_cookbook`, `user_preferences`) utilisent une clé primaire
-*composite* (ex. `(recipe_id, tag_id)`) plutôt qu'un `id` de substitution.
+`shared_user_cookbook`, `user_preferences`, `favorite_recipe`) utilisent une
+clé primaire *composite* (ex. `(recipe_id, tag_id)`) plutôt qu'un `id` de
+substitution.
 Ceci est implémenté avec `models.CompositePrimaryKey`, natif de Django 6 et
 introduit spécifiquement pour ce cas d'usage :
 
@@ -505,11 +549,11 @@ les noms de colonnes en base (`recipe_id`, `tag_id`).
 
 Une limitation : **l'admin Django ne peut pas encore enregistrer un modèle à
 clé primaire composite**. C'est pourquoi `RecipeTag`, `RecipeIngredient`,
-`SharedUserCookbook` et `UserPreference` ne sont pas enregistrés dans le
-`admin.py` de leur app (voir le commentaire en tête de chaque fichier).
-`RecipePlanning` fait exception puisqu'il utilise un `id` de substitution à
-la place - voir sa [description de table](#recipe_planning) ci-dessus pour
-comprendre pourquoi.
+`SharedUserCookbook`, `UserPreference` et `FavoriteRecipe` ne sont pas
+enregistrés dans le `admin.py` de leur app (voir le commentaire en tête de
+chaque fichier). `RecipePlanning` fait exception puisqu'il utilise un `id`
+de substitution à la place - voir sa [description de table](#recipe_planning)
+ci-dessus pour comprendre pourquoi.
 
 ### Exécuter les migrations
 
