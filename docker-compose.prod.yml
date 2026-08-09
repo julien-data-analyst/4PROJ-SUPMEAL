@@ -1,0 +1,74 @@
+services:
+
+  # DATABASE SERVICE
+  postgres:
+    image: postgres:16
+    container_name: recipe_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+
+    # No host port published here, unlike docker-compose.dev.yml: only the
+    # backend needs to reach postgres, and it does so over the internal
+    # compose network (DATABASE_HOST=postgres) - exposing 5432 to the host
+    # would just be unnecessary attack surface in production.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recipes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # DJANGO BACKEND SERVICE
+  backend:
+    build:
+      context: ./backend
+
+    container_name: recipe_backend
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    ports:
+      - "${BACKEND_PORT}:8000"
+
+    # Dependencies are already baked into the image at build time (see
+    # backend/Dockerfile) - collectstatic and migrate both need real env
+    # vars (DATABASE_*, SECRET_KEY...), only available here via env_file,
+    # so they run at container start instead.
+    command: >
+      sh -c "
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
+      "
+
+  # NUXT/VUE FRONTEND SERVICE
+  frontend:
+    build:
+      context: ./frontend
+
+    container_name: recipe_frontend
+    restart: unless-stopped
+
+    depends_on:
+      - backend
+
+    env_file:
+      - .env
+
+    ports:
+      - "${FRONTEND_PORT}:3000"
+
+volumes:
+  postgres_data:

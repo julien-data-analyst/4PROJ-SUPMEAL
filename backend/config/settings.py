@@ -110,6 +110,11 @@ AZURE_AUTHORITY = env(
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves STATIC_ROOT directly from the gunicorn process in production
+    # (DEBUG=False) - must stay right after SecurityMiddleware per WhiteNoise's
+    # own install instructions. No-op in dev (runserver serves static files
+    # itself, before any middleware runs).
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -189,3 +194,18 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+# Only read in production (DEBUG=False): Django's own runserver ignores this
+# and serves staticfiles app-side, but the prod image runs `collectstatic`
+# into this directory at build time and WhiteNoise (see MIDDLEWARE) serves
+# it directly from the gunicorn process - no separate nginx/static container
+# needed.
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
