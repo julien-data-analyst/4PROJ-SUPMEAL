@@ -67,6 +67,19 @@ services:
     env_file:
       - .env
 
+    # nuxt.config.ts computes runtimeConfig.public defaults from plain
+    # process.env vars (AZURE_CLIENT_ID, BACKEND_PORT...) at `nuxt build`
+    # time - the build stage in Dockerfile has no access to .env, so those
+    # defaults get baked in empty/wrong. Nitro (the built server) only
+    # overrides an already-compiled public runtimeConfig key from an env var
+    # named NUXT_PUBLIC_<KEY>, read at container startup - hence the
+    # explicit remapping below instead of relying on env_file alone.
+    environment:
+      NUXT_PUBLIC_API_URL: "http://localhost:${BACKEND_PORT}/api"
+      NUXT_PUBLIC_AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
+      NUXT_PUBLIC_AZURE_AUTHORITY: ${AZURE_AUTHORITY}
+      NUXT_PUBLIC_AZURE_REDIRECT_URI: ${AZURE_REDIRECT_URI}
+
     ports:
       - "${FRONTEND_PORT}:3000"
 
