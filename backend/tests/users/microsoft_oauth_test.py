@@ -1,3 +1,4 @@
+import base64
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,13 +22,36 @@ MICROSOFT_PROFILE = {
     "surname": "Doe",
 }
 
+# A 1x1 white JPEG - real bytes, since the photo endpoint's response content
+# gets base64-encoded into a data URI rather than just having its status
+# checked.
+FAKE_PHOTO_BYTES = base64.b64decode(
+    "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkI"
+    "CQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQ"
+    "EBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIA"
+    "AhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEB"
+    "AQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX"
+    "/9k="
+)
+FAKE_PHOTO_B64 = base64.b64encode(FAKE_PHOTO_BYTES).decode("ascii")
 
-def _mock_response(*, ok: bool = True, status_code: int = 200, json_data=None, text: str = ""):
+
+def _mock_response(
+    *,
+    ok: bool = True,
+    status_code: int = 200,
+    json_data=None,
+    text: str = "",
+    content: bytes = b"",
+    headers: dict | None = None,
+):
     response = MagicMock()
     response.ok = ok
     response.status_code = status_code
     response.json.return_value = json_data or {}
     response.text = text
+    response.content = content
+    response.headers = headers or {}
     return response
 
 
@@ -36,7 +60,11 @@ def _mock_graph_get(*, has_photo: bool):
         if url == GRAPH_ME_URL:
             return _mock_response(json_data=MICROSOFT_PROFILE)
         if url == GRAPH_PHOTO_URL:
-            return _mock_response(ok=has_photo, status_code=200 if has_photo else 404)
+            if has_photo:
+                return _mock_response(
+                    content=FAKE_PHOTO_BYTES, headers={"Content-Type": "image/jpeg"}
+                )
+            return _mock_response(ok=False, status_code=404)
         raise AssertionError(f"Unexpected URL requested: {url}")
 
     return _get
@@ -78,14 +106,14 @@ def test_microsoft_oauth_creates_new_user_with_profile_fields(api_client: APICli
     assert user.username == "jane.doe"
     assert user.first_name == "Jane"
     assert user.last_name == "Doe"
-    assert user.profile_icon == GRAPH_PHOTO_URL
+    assert user.profile_icon == f"data:image/jpeg;base64,{FAKE_PHOTO_B64}"
     assert not user.has_usable_password()
 
     oauth_account = OAuthUser.objects.get(  # pyright: ignore[reportAttributeAccessIssue]
         user=user, provider="microsoft"
     )
     assert oauth_account.domain == "contoso.com"
-    assert oauth_account.profile_icon == GRAPH_PHOTO_URL
+    assert oauth_account.profile_icon == f"data:image/jpeg;base64,{FAKE_PHOTO_B64}"
 
 
 def test_microsoft_oauth_without_photo_leaves_profile_icon_empty(api_client: APIClient):
@@ -130,6 +158,32 @@ def test_microsoft_oauth_links_to_existing_user_by_email(api_client: APIClient, 
     assert OAuthUser.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
         user=existing_user, provider="microsoft"
     ).exists()
+
+
+def test_microsoft_oauth_refreshes_profile_icon_on_existing_user(
+    api_client: APIClient, make_user
+):
+    """A re-login must refresh an existing account's stale/broken photo, not just
+    the linked OAuthUser's - this used to only ever set User.profile_icon at
+    account creation, so a value set before photo-fetching worked (or before the
+    account had a photo at all) never got corrected on subsequent logins."""
+    existing_user = make_user(
+        username="janedoe", email="jane.doe@contoso.com", profile_icon="stale-value"
+    )
+    url = reverse("oauth-microsoft")
+
+    with (
+        patch(
+            "users.oauth_microsoft._confidential_client",
+            return_value=_mock_confidential_client(),
+        ),
+        patch("users.oauth_microsoft.requests.get", side_effect=_mock_graph_get(has_photo=True)),
+    ):
+        response = api_client.post(url, {"code": "auth-code"}, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    existing_user.refresh_from_db()
+    assert existing_user.profile_icon == f"data:image/jpeg;base64,{FAKE_PHOTO_B64}"
 
 
 def test_microsoft_oauth_links_to_existing_user_by_email_case_insensitively(

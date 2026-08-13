@@ -3,7 +3,7 @@ services:
   # DATABASE SERVICE
   postgres:
     image: postgres:16
-    container_name: recipe_postgres
+    container_name: recipe_postgres_prod
     restart: unless-stopped
 
     environment:
@@ -29,7 +29,7 @@ services:
     build:
       context: ./backend
 
-    container_name: recipe_backend
+    container_name: recipe_backend_prod
     restart: unless-stopped
 
     depends_on:
@@ -58,7 +58,7 @@ services:
     build:
       context: ./frontend
 
-    container_name: recipe_frontend
+    container_name: recipe_frontend_prod
     restart: unless-stopped
 
     depends_on:
