@@ -169,7 +169,9 @@ def link_microsoft_account(user: User, profile: dict, access_token: str) -> User
 
     if User.objects.exclude(pk=user.pk).filter(email__iexact=email).exists():
         raise MicrosoftOAuthError(
-            "Ce compte Microsoft est déjà lié à un autre utilisateur. Veuillez utiliser un autre compte Microsoft ou contacter le support si vous pensez qu'il s'agit d'une erreur."
+            "Ce compte Microsoft est déjà lié à un autre utilisateur. Veuillez utiliser un "
+            "autre compte Microsoft ou contacter le support si vous pensez qu'il s'agit "
+            "d'une erreur."
         )
 
     domain = email.split("@")[-1]
@@ -179,7 +181,7 @@ def link_microsoft_account(user: User, profile: dict, access_token: str) -> User
         user.email = email
         user.set_unusable_password()
         if profile_icon:
-            user.profile_icon = profile_icon
+            user.profile_icon = profile_icon  # pyright: ignore
         user.save()
 
         OAuthUser.objects.update_or_create(  # pyright: ignore[reportAttributeAccessIssue]
