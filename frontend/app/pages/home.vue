@@ -218,7 +218,7 @@ const sharedActivityRoles = computed(() =>
         v-else
         class="flex items-center gap-3 rounded-[10px] border border-dashed border-sup-border bg-sup-withe p-6 text-[13px] text-gray-400"
       >
-        <IconRecipe size="sm" />  
+        <IconRecipe size="sm" />
         Vous n'avez pas encore de recette. Créez votre première recette
         personnelle !
       </div>
@@ -312,7 +312,7 @@ const sharedActivityRoles = computed(() =>
         v-else
         class="flex items-center gap-3 rounded-[10px] border border-dashed border-sup-border bg-sup-withe p-6 text-[13px] text-gray-400"
       >
-        <IconCalendar size="sm"/>
+        <IconCalendar size="sm" />
         Vous n'avez pas encore de planning. Créez votre premier planning de
         repas !
       </div>

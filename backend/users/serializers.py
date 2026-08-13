@@ -170,5 +170,5 @@ class SafeTokenRefreshSerializer(TokenRefreshSerializer):
     def validate(self, attrs: dict) -> dict:
         try:
             return super().validate(attrs)
-        except User.DoesNotExist:
+        except ObjectDoesNotExist:
             raise InvalidToken("No account found for this token.")

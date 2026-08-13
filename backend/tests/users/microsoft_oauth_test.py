@@ -160,9 +160,7 @@ def test_microsoft_oauth_links_to_existing_user_by_email(api_client: APIClient, 
     ).exists()
 
 
-def test_microsoft_oauth_refreshes_profile_icon_on_existing_user(
-    api_client: APIClient, make_user
-):
+def test_microsoft_oauth_refreshes_profile_icon_on_existing_user(api_client: APIClient, make_user):
     """A re-login must refresh an existing account's stale/broken photo, not just
     the linked OAuthUser's - this used to only ever set User.profile_icon at
     account creation, so a value set before photo-fetching worked (or before the
