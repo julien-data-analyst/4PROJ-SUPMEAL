@@ -304,7 +304,6 @@ const tabButtonClasses = (key: "recettes" | "planning" | "membres") => [
             :to="`/planning/${planning.id}/view`"
             :can-edit="canEditContent"
             :can-manage="canManageContent"
-            :can-reassign-cookbook="false"
           />
         </div>
         <div

@@ -126,6 +126,26 @@ def test_login_rejects_get_requests(api_client: APIClient):
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
 
+def test_login_is_throttled_after_too_many_attempts(api_client: APIClient):
+    """Test that repeated login attempts are rate-limited (brute-force protection)."""
+    from config.settings import REST_FRAMEWORK
+
+    rate = REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["auth"]
+    limit = int(rate.split("/")[0])
+    url = reverse("user-login")
+
+    for _ in range(limit):
+        response = api_client.post(
+            url, {"email": "nobody@example.com", "password": "wrong"}, format="json"
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    response = api_client.post(
+        url, {"email": "nobody@example.com", "password": "wrong"}, format="json"
+    )
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+
+
 def test_me_requires_authentication(api_client: APIClient):
     """Test that the /me endpoint requires authentication and returns 401 for anonymous users."""
     url = reverse("user-me")

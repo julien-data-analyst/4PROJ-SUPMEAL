@@ -293,3 +293,66 @@ def test_owner_can_create_recipe_in_cookbook_shared_with_them(
     assert response.status_code == status.HTTP_201_CREATED
     assert response.data is not None
     assert response.data["cookbook"] == cookbook_shared_with_regular_user.pk
+
+
+def test_owner_cannot_move_a_recipe_from_one_cookbook_to_another(
+    auth_client: APIClient, owned_cookbook: Cookbook, cookbook_shared_with_regular_user: Cookbook
+):
+    """A recipe already filed in cookbook A cannot be moved directly to cookbook B."""
+    create_url = reverse("recipe-list")
+    created = auth_client.post(
+        create_url, {"title": "Crepes", "cookbook": owned_cookbook.pk}, format="json"
+    )
+    recipe_id = created.data["id"]  # pyright: ignore[reportOptionalSubscript]
+
+    url = reverse("recipe-detail", kwargs={"pk": recipe_id})
+    response = auth_client.patch(
+        url, {"cookbook": cookbook_shared_with_regular_user.pk}, format="json"
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    recipe = Recipe.objects.get(pk=recipe_id)  # pyright: ignore[reportAttributeAccessIssue]
+    assert recipe.cookbook_id == owned_cookbook.pk
+
+
+def test_owner_can_remove_and_rejoin_a_recipe_via_its_cookbook(
+    auth_client: APIClient, owned_recipe: Recipe, owned_cookbook: Cookbook
+):
+    """Unlike a direct A -> B move, joining (None -> X) and leaving (X -> None) stay allowed."""
+    url = reverse("recipe-detail", kwargs={"pk": owned_recipe.pk})
+
+    joined = auth_client.patch(url, {"cookbook": owned_cookbook.pk}, format="json")
+    assert joined.status_code == status.HTTP_200_OK
+    assert joined.data["cookbook"] == owned_cookbook.pk  # pyright: ignore[reportOptionalSubscript]
+
+    left = auth_client.patch(url, {"cookbook": None}, format="json")
+    assert left.status_code == status.HTTP_200_OK
+    assert left.data["cookbook"] is None  # pyright: ignore[reportOptionalSubscript]
+
+
+def test_used_in_plannings_hides_a_planning_the_caller_cannot_see(
+    auth_client: APIClient,
+    owned_recipe: Recipe,
+    other_user: User,  # noqa: F811
+    cookbook_shared_with_regular_user: Cookbook,
+):
+    """A recipe visible via a shared cookbook must not leak an unrelated private
+    planning of another user that also happens to schedule it (IDOR)."""
+    owned_recipe.cookbook = cookbook_shared_with_regular_user  # pyright: ignore[reportAttributeAccessIssue]
+    owned_recipe.save()
+
+    private_planning = Planning(name="Planning prive de Bob", creator=other_user)
+    private_planning.save()
+    RecipePlanning(
+        planning=private_planning,
+        recipe=owned_recipe,
+        type="plat",
+        lunch="midi",
+        dayofweek="lundi",
+    ).save()
+
+    url = reverse("recipe-detail", kwargs={"pk": owned_recipe.pk})
+    response = auth_client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["used_in_plannings"] == []  # pyright: ignore[reportOptionalSubscript]

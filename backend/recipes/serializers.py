@@ -131,9 +131,19 @@ class RecipeSerializer(serializers.ModelSerializer):
         # Distinct plannings that schedule this recipe in at least one slot -
         # relies on `recipe_plannings__planning` being prefetched by the
         # viewset's queryset, so this doesn't add an N+1 query per recipe.
+        # Only plannings the requesting user can actually see are included -
+        # a recipe visible via a shared cookbook may also be scheduled in
+        # someone else's unrelated *private* planning, which must not leak
+        # here (see PlanningViewSet.get_queryset for the same visibility rule).
+        user = self.context["request"].user
         seen: dict[int, str] = {}
         for recipe_planning in obj.recipe_plannings.all():  # pyright: ignore[reportAttributeAccessIssue]
-            seen[recipe_planning.planning_id] = recipe_planning.planning.name
+            planning = recipe_planning.planning
+            visible = planning.creator_id == user.id or (
+                planning.cookbook_id is not None and has_rank(user, planning.cookbook, "reader")
+            )
+            if visible:
+                seen[recipe_planning.planning_id] = planning.name
         return [{"id": planning_id, "name": name} for planning_id, name in seen.items()]
 
 
@@ -175,6 +185,19 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return value
 
     def validate_cookbook(self, cookbook):
+        if (
+            self.instance is not None
+            and self.instance.cookbook_id is not None
+            and cookbook is not None
+            and cookbook.pk != self.instance.cookbook_id
+        ):
+            # A recipe may join a cookbook (None -> X) or leave one (X ->
+            # None), but not jump directly from one cookbook to another -
+            # remove it from its current cookbook first.
+            raise serializers.ValidationError(
+                "Cannot move a recipe directly from one cookbook to another - "
+                "remove it from its current cookbook first."
+            )
         if cookbook is None:
             return cookbook
         user = self.context["request"].user
