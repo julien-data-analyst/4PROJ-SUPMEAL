@@ -85,6 +85,24 @@ class PlanningWriteSerializer(serializers.ModelSerializer):
         return value
 
     def validate_cookbook(self, cookbook):
+        if self.instance is not None:
+            # A planning's cookbook can only be chosen at creation time (e.g.
+            # from within a cookbook page, where the meal recipe picker is
+            # already restricted to that cookbook's own recipes). Filing an
+            # *existing* planning into a cookbook - or moving it to a
+            # different one - afterwards is not allowed: its meals may
+            # reference purely personal recipes that aren't part of that
+            # cookbook, which would otherwise leak them to the cookbook's
+            # other members. Clearing it back to personal (-> None) stays
+            # allowed.
+            current_cookbook_id = self.instance.cookbook_id
+            new_cookbook_id = cookbook.pk if cookbook is not None else None
+            if new_cookbook_id is not None and new_cookbook_id != current_cookbook_id:
+                raise serializers.ValidationError(
+                    "A planning's cookbook can only be set when it is created - it "
+                    "cannot be assigned or moved to a cookbook afterwards."
+                )
+            return cookbook
         if cookbook is None:
             return cookbook
         user = self.context["request"].user
