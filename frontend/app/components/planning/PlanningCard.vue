@@ -9,9 +9,7 @@ import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";
 import IconEdit from "~/components/icons/IconEdit.vue";
 import IconTrash from "~/components/icons/IconTrash.vue";
-import IconCookbook from "~/components/icons/IconCookbook.vue";
 import DeletePlanningModal from "~/components/planning/DeletePlanningModal.vue";
-import AssignCookbookMenu from "~/components/cookbook/AssignCookbookMenu.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -19,32 +17,26 @@ const props = withDefaults(
     to: string;
     // See RecipeCard's identical props - gates the menu for a shared
     // cookbook's reader/commentator (canEdit=false) or editor (canManage=
-    // false) role. canReassignCookbook separately hides just the
-    // "Cookbook" item - a cookbook's own Planning tab renders this card
-    // for a planning already filed there, where moving it to a different
-    // cookbook has no place in the UI.
+    // false) role.
     canEdit?: boolean;
     canManage?: boolean;
-    canReassignCookbook?: boolean;
     // Hides the "..." options menu entirely - used by the search page,
     // where results can come from cookbooks the caller has no role on
     // at all.
     showMenu?: boolean;
   }>(),
-  { canEdit: true, canManage: true, canReassignCookbook: true, showMenu: true },
+  { canEdit: true, canManage: true, showMenu: true },
 );
 
 const store = usePlanningStore();
 const toast = useToastStore();
 
 const menuOpen = ref(false);
-const cookbookMenuOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 const deleteModalOpen = ref(false);
 
 onClickOutside(menuRef, () => {
   menuOpen.value = false;
-  cookbookMenuOpen.value = false;
 });
 
 const mealCountLabel = computed(() => {
@@ -61,18 +53,6 @@ const confirmDelete = async () => {
   await store.deletePlanning(props.planning.id);
   deleteModalOpen.value = false;
   toast.success("Planning supprimé.");
-};
-
-const openCookbookMenu = () => {
-  menuOpen.value = false;
-  cookbookMenuOpen.value = true;
-};
-
-const onSelectCookbook = async (cookbook: { id: number; name: string }) => {
-  await store.updatePlanning(props.planning.id, { cookbook: cookbook.id });
-  store.plannings = store.plannings.filter((p) => p.id !== props.planning.id);
-  cookbookMenuOpen.value = false;
-  toast.success(`Planning ajouté au cookbook « ${cookbook.name} ».`);
 };
 
 const menuItemClasses =
@@ -145,15 +125,6 @@ const menuItemClasses =
           Modifier
         </NuxtLink>
         <button
-          v-if="canManage && canReassignCookbook"
-          type="button"
-          :class="menuItemClasses"
-          @click.prevent="openCookbookMenu"
-        >
-          <IconCookbook size="xs" />
-          Cookbook
-        </button>
-        <button
           v-if="canManage"
           type="button"
           :class="[menuItemClasses, 'text-sup-red-error']"
@@ -162,16 +133,6 @@ const menuItemClasses =
           <IconTrash size="xs" />
           Supprimer
         </button>
-      </div>
-
-      <div
-        v-if="cookbookMenuOpen"
-        class="absolute right-0 top-full mt-1 overflow-hidden rounded-md border border-sup-border bg-sup-withe shadow-lg"
-      >
-        <AssignCookbookMenu
-          :current-cookbook-id="planning.cookbook"
-          @select="onSelectCookbook"
-        />
       </div>
     </div>
 
