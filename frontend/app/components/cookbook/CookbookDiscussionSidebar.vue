@@ -8,7 +8,6 @@ import {
   getCookbookRole,
   COOKBOOK_ROLE_RANK,
 } from "~/composables/useCookbooks";
-import type { Cookbook } from "~/stores/cookbooks/useCookbookStore";
 import type { CookbookDiscussionDefault } from "~/composables/useCookbookDiscussionContext";
 import type { User } from "~/composables/useAuth";
 import IconSend from "~/components/icons/IconSend.vue";
@@ -41,7 +40,14 @@ const { user } = useAuth();
 const store = useCookbookStore();
 const toast = useToastStore();
 
-const cookbook = ref<Cookbook | null>(null);
+// Reads straight from the store (rather than a local `ref` populated once
+// from `loadCookbook`'s response) so that a share/unshare elsewhere (see
+// CookbookMembersPanel.vue, which mutates `store.currentCookbook` via
+// `applyCookbookUpdate`) is reflected here immediately - otherwise the
+// channel list/`isAlone` stayed stale until the page was reloaded.
+const cookbook = computed(() =>
+  store.currentCookbook?.id === props.cookbookId ? store.currentCookbook : null,
+);
 const isLoadingCookbook = ref(true);
 
 const cookbookRole = computed(() =>
@@ -75,7 +81,7 @@ const setChannelKeyFromDefault = () => {
 const loadCookbook = async () => {
   isLoadingCookbook.value = true;
   try {
-    cookbook.value = await store.fetchCookbook(props.cookbookId);
+    await store.fetchCookbook(props.cookbookId);
   } finally {
     isLoadingCookbook.value = false;
   }

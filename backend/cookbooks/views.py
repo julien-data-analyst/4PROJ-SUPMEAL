@@ -386,7 +386,7 @@ class CookbookViewSet(viewsets.ModelViewSet):
         # ``cookbook`` still carries the pre-share ``shared_with`` prefetch
         # cache from ``get_object()`` - re-fetch so the response is current.
         cookbook.refresh_from_db()
-        return Response(CookbookSerializer(cookbook).data)
+        return Response(CookbookSerializer(cookbook, context={"request": request}).data)
 
     @action(detail=True, methods=["post"])
     def unshare(self, request: Request, pk=None) -> Response:
@@ -400,7 +400,7 @@ class CookbookViewSet(viewsets.ModelViewSet):
         ).delete()
 
         cookbook.refresh_from_db()
-        return Response(CookbookSerializer(cookbook).data)
+        return Response(CookbookSerializer(cookbook, context={"request": request}).data)
 
     @action(detail=True, methods=["get"], url_path="export")
     def export_detail(self, request: Request, pk=None) -> Response:
