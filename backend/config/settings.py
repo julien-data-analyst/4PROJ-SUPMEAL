@@ -75,6 +75,16 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Scoped (not global) so only the sensitive auth-adjacent views opted into
+    # `throttle_scope = "auth"` are rate-limited - see users/views.py. Without
+    # this, login/register/OAuth/change-password had no brute-force/
+    # credential-stuffing protection at all.
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "auth": "10/min",
+    },
 }
 
 SPECTACULAR_SETTINGS = {

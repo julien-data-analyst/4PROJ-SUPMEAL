@@ -330,3 +330,53 @@ def test_owner_can_create_planning_in_cookbook_shared_with_them(
     assert response.status_code == status.HTTP_201_CREATED
     assert response.data is not None
     assert response.data["cookbook"] == cookbook_shared_with_regular_user.pk
+
+
+def test_owner_cannot_file_an_existing_personal_planning_into_a_cookbook(
+    auth_client: APIClient, owned_planning: Planning, owned_cookbook: Cookbook
+):
+    """A planning's cookbook can only be chosen at creation - not assigned afterwards."""
+    url = reverse("planning-detail", kwargs={"pk": owned_planning.pk})
+
+    response = auth_client.patch(url, {"cookbook": owned_cookbook.pk}, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    owned_planning.refresh_from_db()
+    assert owned_planning.cookbook_id is None  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def test_owner_cannot_move_a_planning_from_one_cookbook_to_another(
+    auth_client: APIClient, owned_cookbook: Cookbook, cookbook_shared_with_regular_user: Cookbook
+):
+    """A planning already filed in cookbook A cannot be moved directly to cookbook B."""
+    create_url = reverse("planning-list")
+    created = auth_client.post(
+        create_url, {"name": "Semaine 1", "cookbook": owned_cookbook.pk}, format="json"
+    )
+    planning_id = created.data["id"]  # pyright: ignore[reportOptionalSubscript]
+
+    url = reverse("planning-detail", kwargs={"pk": planning_id})
+    response = auth_client.patch(
+        url, {"cookbook": cookbook_shared_with_regular_user.pk}, format="json"
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    planning = Planning.objects.get(pk=planning_id)  # pyright: ignore[reportAttributeAccessIssue]
+    assert planning.cookbook_id == owned_cookbook.pk
+
+
+def test_owner_can_remove_a_planning_from_its_cookbook(
+    auth_client: APIClient, owned_cookbook: Cookbook
+):
+    """Clearing a planning's cookbook back to personal (-> None) stays allowed."""
+    create_url = reverse("planning-list")
+    created = auth_client.post(
+        create_url, {"name": "Semaine 1", "cookbook": owned_cookbook.pk}, format="json"
+    )
+    planning_id = created.data["id"]  # pyright: ignore[reportOptionalSubscript]
+
+    url = reverse("planning-detail", kwargs={"pk": planning_id})
+    response = auth_client.patch(url, {"cookbook": None}, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["cookbook"] is None  # pyright: ignore[reportOptionalSubscript]
