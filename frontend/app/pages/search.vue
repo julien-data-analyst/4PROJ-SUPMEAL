@@ -113,7 +113,9 @@ const runSearch = async () => {
       await cookbookStore.fetchCookbooks({
         name: f.name || undefined,
         shared_with_me:
-          f.ownershipScope === "all" ? undefined : f.ownershipScope === "shared",
+          f.ownershipScope === "all"
+            ? undefined
+            : f.ownershipScope === "shared",
         role: f.ownershipScope === "shared" ? f.role || undefined : undefined,
         page_size: PAGE_SIZE,
       });
