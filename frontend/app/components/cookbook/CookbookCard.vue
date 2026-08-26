@@ -7,7 +7,10 @@ import {
 } from "~/composables/useCookbooksEditView";
 import { useToastStore } from "~/stores/useToastStore";
 import { useAuth } from "~/composables/useAuth";
-import { getCookbookRole, COOKBOOK_ROLE_LABELS } from "~/composables/useCookbooks";
+import {
+  getCookbookRole,
+  COOKBOOK_ROLE_LABELS,
+} from "~/composables/useCookbooks";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
 import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";

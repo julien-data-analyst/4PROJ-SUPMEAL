@@ -29,12 +29,13 @@ const cookbookFilters = defineModel<CookbookFilterState>("cookbookFilters", {
   required: true,
 });
 
-const roleOptions: { value: Exclude<CookbookRoleFilter, "">; label: string }[] = [
-  { value: "reader", label: COOKBOOK_ROLE_LABELS.reader },
-  { value: "commentator", label: COOKBOOK_ROLE_LABELS.commentator },
-  { value: "editor", label: COOKBOOK_ROLE_LABELS.editor },
-  { value: "creator", label: COOKBOOK_ROLE_LABELS.creator },
-];
+const roleOptions: { value: Exclude<CookbookRoleFilter, "">; label: string }[] =
+  [
+    { value: "reader", label: COOKBOOK_ROLE_LABELS.reader },
+    { value: "commentator", label: COOKBOOK_ROLE_LABELS.commentator },
+    { value: "editor", label: COOKBOOK_ROLE_LABELS.editor },
+    { value: "creator", label: COOKBOOK_ROLE_LABELS.creator },
+  ];
 
 const recipeStore = useRecipeStore();
 const fetchTagOptions = (search: string) =>
@@ -280,7 +281,11 @@ const rangeInputClasses =
           :class="fieldInputClasses"
         >
           <option value="">Tous</option>
-          <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
+          <option
+            v-for="opt in roleOptions"
+            :key="opt.value"
+            :value="opt.value"
+          >
             {{ opt.label }}
           </option>
         </select>
