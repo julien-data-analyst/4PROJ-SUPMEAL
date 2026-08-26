@@ -6,6 +6,11 @@ import {
   type DeleteCookbookOptions,
 } from "~/composables/useCookbooksEditView";
 import { useToastStore } from "~/stores/useToastStore";
+import { useAuth } from "~/composables/useAuth";
+import {
+  getCookbookRole,
+  COOKBOOK_ROLE_LABELS,
+} from "~/composables/useCookbooks";
 import IconCookbook from "~/components/icons/IconCookbook.vue";
 import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";
@@ -52,6 +57,12 @@ const contentLabel = computed(() => {
   return `${recipeCount} recette${recipeCount > 1 ? "s" : ""} · ${planningCount} planning${planningCount > 1 ? "s" : ""}`;
 });
 
+const { user } = useAuth();
+const roleLabel = computed(() => {
+  const role = getCookbookRole(props.cookbook, user.value?.id);
+  return role ? COOKBOOK_ROLE_LABELS[role] : null;
+});
+
 const openDeleteModal = () => {
   menuOpen.value = false;
   deleteModalOpen.value = true;
@@ -96,9 +107,17 @@ const menuItemClasses =
     </div>
 
     <div class="px-3 pb-3 pt-[10px]">
-      <p class="mb-[3px] truncate text-[13px] font-semibold text-sup-very-gray">
-        {{ cookbook.name }}
-      </p>
+      <div class="mb-[3px] flex items-center gap-1.5">
+        <p class="truncate text-[13px] font-semibold text-sup-very-gray">
+          {{ cookbook.name }}
+        </p>
+        <span
+          v-if="roleLabel"
+          class="shrink-0 rounded-full bg-sup-light-green/15 px-2 py-0.5 text-[10px] font-semibold text-sup-dark-green"
+        >
+          {{ roleLabel }}
+        </span>
+      </div>
       <div
         class="flex items-center justify-between gap-1.5 text-[11px] text-gray-400"
       >

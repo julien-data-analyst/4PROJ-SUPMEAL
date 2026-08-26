@@ -553,6 +553,7 @@ Lists cookbooks the caller created **or** was shared.
 | --- | --- | --- |
 | `name` | string | Case-insensitive partial match on cookbook name. |
 | `shared_with_me` | boolean | `true`: only cookbooks shared with the caller (not owned by them). `false`: only cookbooks the caller owns. |
+| `role` | string | One of `reader`, `commentator`, `editor`, `creator`. Only cookbooks shared with the caller at exactly that role - `admin` isn't a valid value here since it's never stored (implicit for the cookbook's own creator), so filtering by any real role already excludes the caller's own cookbooks. |
 | `page` | integer | Page number. |
 | `page_size` | integer | Items per page (max 100). |
 

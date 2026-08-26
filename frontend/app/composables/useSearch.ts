@@ -1,6 +1,7 @@
 // composables/useSearch.ts
 import type { Planning, PlanningType } from "~/stores/usePlanningStore";
 import type { Recipe } from "~/stores/useRecipeStore";
+import type { CookbookRole } from "~/stores/cookbooks/useCookbookStore";
 import { sumStepMinutes } from "~/composables/useRecipes";
 
 export type SearchType = "recipes" | "plannings" | "cookbooks";
@@ -11,6 +12,11 @@ export type SearchType = "recipes" | "plannings" | "cookbooks";
 export type CookbookScope = "all" | "personal" | "cookbook";
 export type PlanningScope = "all" | "not_planned" | "planned";
 export type FavoriteScope = "all" | "favorite" | "not_favorite";
+// For the cookbooks search tab itself: "all" (own + shared), "personal"
+// (created by the caller) or "shared" (shared with the caller by someone
+// else) - maps to the backend's `shared_with_me` filter.
+export type CookbookOwnershipScope = "all" | "personal" | "shared";
+export type CookbookRoleFilter = "" | Exclude<CookbookRole, "admin">;
 
 export interface RecipeFilterState {
   name: string;
@@ -21,8 +27,12 @@ export interface RecipeFilterState {
   planningScope: PlanningScope;
   planningName: string;
   favoriteScope: FavoriteScope;
-  // Frontend-only: narrows the currently loaded recipes by prep/cooking
-  // time (minutes), never sent to the backend.
+  // Prep/cooking time (minutes). On the search page (`pages/search.vue`)
+  // these are sent to the backend like every other attribute (see
+  // `RecipeFilter.filter_prep_time_min`/`cooking_duration_min` etc.).
+  // `filterRecipesLocally` below re-applies them client-side purely for a
+  // cookbook's own "Recettes" tab, which has no backend query to delegate
+  // to since `cookbook.recipes` is already loaded in full.
   prepTimeMin: number | "";
   prepTimeMax: number | "";
   cookingTimeMin: number | "";
@@ -38,6 +48,9 @@ export interface PlanningFilterState {
 
 export interface CookbookFilterState {
   name: string;
+  ownershipScope: CookbookOwnershipScope;
+  // Only meaningful alongside ownershipScope === "shared".
+  role: CookbookRoleFilter;
 }
 
 export function createRecipeFilters(): RecipeFilterState {
@@ -62,7 +75,7 @@ export function createPlanningFilters(): PlanningFilterState {
 }
 
 export function createCookbookFilters(): CookbookFilterState {
-  return { name: "" };
+  return { name: "", ownershipScope: "all", role: "" };
 }
 
 // Fully client-side equivalent of the backend's recipe filters, applied
