@@ -245,3 +245,47 @@ def test_shared_with_me_filter_false_returns_only_the_callers_own_cookbooks(
     assert response.data is not None
     names = [item["name"] for item in response.data["results"]]
     assert names == [owned_cookbook.name]
+
+
+##########################################-
+# role: cookbooks shared with the caller at a specific role
+##########################################-
+
+
+def test_role_filter_returns_only_cookbooks_shared_at_that_role(
+    auth_client: APIClient, other_user: User, regular_user: User
+):
+    """Test that ``?role=editor`` only returns cookbooks shared at exactly that role."""
+    editor_cookbook = Cookbook(name="Carnet edite", creator=other_user)
+    editor_cookbook.save()
+    SharedUserCookbook(
+        cookbook=editor_cookbook, user=regular_user, role=SharedUserCookbook.Role.EDITOR
+    ).save()
+
+    reader_cookbook = Cookbook(name="Carnet lu", creator=other_user)
+    reader_cookbook.save()
+    SharedUserCookbook(
+        cookbook=reader_cookbook, user=regular_user, role=SharedUserCookbook.Role.READER
+    ).save()
+
+    url = reverse("cookbook-list")
+
+    response = auth_client.get(url, {"role": "editor"})
+
+    assert response.data is not None
+    names = [item["name"] for item in response.data["results"]]
+    assert names == [editor_cookbook.name]
+
+
+def test_role_filter_creator_does_not_include_the_callers_own_cookbooks(
+    auth_client: APIClient, owned_cookbook: Cookbook, cookbook_shared_as_creator: Cookbook
+):
+    """The caller's own cookbooks (implicit "admin") must not match ``role=creator``,
+    the *shared* "creator" role string - see SharedUserCookbook.Role docstring."""
+    url = reverse("cookbook-list")
+
+    response = auth_client.get(url, {"role": "creator"})
+
+    assert response.data is not None
+    names = [item["name"] for item in response.data["results"]]
+    assert names == [cookbook_shared_as_creator.name]
