@@ -15,6 +15,10 @@ dependencies = [
     "django-environ",
     "psycopg[binary]",
     "pillow",
+    "msal",
+    "requests",
+    "gunicorn>=26.0.0",
+    "whitenoise>=6.12.0",
 ]
 
 [dependency-groups]
@@ -28,12 +32,24 @@ dev = [
     "django-extensions",
 ]
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "*_test.py", "*_access.py", "*_cookbooks.py"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+extend-exclude = ["*/migrations/*.py"]
 
 [tool.ruff.lint]
 select = ["E","F","I","UP","DJ"]
 
 [tool.basedpyright]
-typeCheckingMode = "recommended"
+typeCheckingMode = "standard"
+exclude = ["**/migrations/*.py", ".venv"]
+
+reportMissingTypeStubs = "none"
+reportUnusedCallResult = "none"
+reportImplicitStringConcatenation = "none"
+reportUnknownVariableType = "none"
+reportAny = "none"

@@ -1,0 +1,87 @@
+services:
+
+  # DATABASE SERVICE
+  postgres:
+    image: postgres:16
+    container_name: recipe_postgres_prod
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+
+    # No host port published here, unlike docker-compose.dev.yml: only the
+    # backend needs to reach postgres, and it does so over the internal
+    # compose network (DATABASE_HOST=postgres) - exposing 5432 to the host
+    # would just be unnecessary attack surface in production.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recipes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # DJANGO BACKEND SERVICE
+  backend:
+    build:
+      context: ./backend
+
+    container_name: recipe_backend_prod
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    ports:
+      - "${BACKEND_PORT}:8000"
+
+    # Dependencies are already baked into the image at build time (see
+    # backend/Dockerfile) - collectstatic and migrate both need real env
+    # vars (DATABASE_*, SECRET_KEY...), only available here via env_file,
+    # so they run at container start instead.
+    command: >
+      sh -c "
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
+      "
+
+  # NUXT/VUE FRONTEND SERVICE
+  frontend:
+    build:
+      context: ./frontend
+
+    container_name: recipe_frontend_prod
+    restart: unless-stopped
+
+    depends_on:
+      - backend
+
+    env_file:
+      - .env
+
+    # nuxt.config.ts computes runtimeConfig.public defaults from plain
+    # process.env vars (AZURE_CLIENT_ID, BACKEND_PORT...) at `nuxt build`
+    # time - the build stage in Dockerfile has no access to .env, so those
+    # defaults get baked in empty/wrong. Nitro (the built server) only
+    # overrides an already-compiled public runtimeConfig key from an env var
+    # named NUXT_PUBLIC_<KEY>, read at container startup - hence the
+    # explicit remapping below instead of relying on env_file alone.
+    environment:
+      NUXT_PUBLIC_API_URL: "http://localhost:${BACKEND_PORT}/api"
+      NUXT_PUBLIC_AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
+      NUXT_PUBLIC_AZURE_AUTHORITY: ${AZURE_AUTHORITY}
+      NUXT_PUBLIC_AZURE_REDIRECT_URI: ${AZURE_REDIRECT_URI}
+
+    ports:
+      - "${FRONTEND_PORT}:3000"
+
+volumes:
+  postgres_data:

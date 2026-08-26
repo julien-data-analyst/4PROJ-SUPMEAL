@@ -1,0 +1,285 @@
+<script setup lang="ts">
+import AppButton from "~/components/buttons/AppButton.vue";
+import IconChevronLeft from "~/components/icons/IconChevronLeft.vue";
+import IconStar from "~/components/icons/IconStar.vue";
+import IconTrash from "~/components/icons/IconTrash.vue";
+import IconAlertTriangle from "~/components/icons/IconAlertTriangle.vue";
+import DeleteRecipeModal from "~/components/recipes/DeleteRecipeModal.vue";
+import { useRecipeView } from "~/composables/useRecipesEditView";
+import {
+  formatNumber,
+  duryToMinutes,
+  capitalizeFirst,
+} from "~/composables/useRecipes";
+import { useGoBack } from "~/composables/useGoBack";
+
+definePageMeta({ layout: "app" });
+
+const recipeId = Number(useRoute().params.id);
+const goBack = useGoBack("/recipes");
+
+const {
+  isLoading,
+  deleteModalOpen,
+  recipe,
+  canEdit,
+  canManage,
+  totalPrepMinutes,
+  cookbookName,
+  basePersons,
+  selectedPersons,
+  incrementPersons,
+  decrementPersons,
+  scaledQuantity,
+  onToggleFavorite,
+  confirmDelete,
+  formatCookingDuration,
+  renderStepMarkdown,
+} = useRecipeView(recipeId);
+</script>
+
+<template>
+  <div class="mx-auto max-w-[900px]">
+    <div class="mb-[22px] flex flex-wrap items-center justify-between gap-4">
+      <button
+        type="button"
+        class="flex items-center gap-[6px] text-[13px] font-medium text-gray-400 hover:text-sup-dark-green"
+        @click="goBack"
+      >
+        <IconChevronLeft size="xs" />
+        Retour
+      </button>
+
+      <div v-if="recipe" class="flex flex-wrap items-center gap-[10px]">
+        <AppButton
+          type="button"
+          variant="secondary"
+          :class="recipe.is_favorite ? 'text-sup-yellow-warning!' : ''"
+          @click="onToggleFavorite"
+        >
+          <template #icon
+            ><IconStar size="xs" :filled="recipe.is_favorite"
+          /></template>
+          {{ recipe.is_favorite ? "Favori" : "Ajouter aux favoris" }}
+        </AppButton>
+        <button
+          v-if="canManage"
+          type="button"
+          class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-red-200 text-sup-red-error transition hover:bg-sup-red-error/10"
+          title="Supprimer la recette"
+          @click="deleteModalOpen = true"
+        >
+          <IconTrash size="xs" />
+        </button>
+        <AppButton
+          v-if="canEdit"
+          variant="primary"
+          :to="`/recipes/${recipeId}/edit`"
+        >
+          Modifier
+        </AppButton>
+      </div>
+    </div>
+
+    <div v-if="isLoading" class="py-16 text-center text-[13px] text-gray-400">
+      Chargement de la recette...
+    </div>
+
+    <template v-else-if="recipe">
+      <div class="mb-4">
+        <div
+          v-if="recipe.image"
+          class="mb-3 h-56 w-full overflow-hidden rounded-md"
+        >
+          <a
+            v-if="recipe.source"
+            :href="recipe.source"
+            target="_blank"
+            rel="noopener noreferrer"
+            :title="`Ouvrir la source : ${recipe.source}`"
+            class="block h-full w-full"
+          >
+            <img
+              :src="recipe.image"
+              :alt="recipe.title"
+              class="h-full w-full object-cover transition hover:brightness-95"
+            />
+          </a>
+          <img
+            v-else
+            :src="recipe.image"
+            :alt="recipe.title"
+            class="h-full w-full object-cover"
+          />
+        </div>
+        <h1 class="mb-[6px] text-[24px] font-semibold text-sup-very-gray">
+          {{ recipe.title }}
+        </h1>
+        <div
+          class="flex flex-wrap items-center gap-2 text-[12.5px] text-gray-400"
+        >
+          <NuxtLink
+            v-if="recipe.cookbook"
+            :to="`/cookbooks/${recipe.cookbook}/view`"
+            class="inline-flex items-center rounded-full border border-sup-border bg-sup-withe px-[10px] py-[3px] text-[11px] font-semibold text-gray-400 hover:text-sup-dark-green hover:underline"
+          >
+            Dans le cookbook « {{ cookbookName || "…" }} »
+          </NuxtLink>
+          <span
+            v-else
+            class="inline-flex items-center rounded-full border border-sup-border bg-sup-withe px-[10px] py-[3px] text-[11px] font-semibold text-gray-400"
+          >
+            Personnel
+          </span>
+          <span
+            >par
+            {{ recipe.creator.first_name || recipe.creator.username }}</span
+          >
+          <span v-if="totalPrepMinutes > 0">
+            · Préparation : {{ formatCookingDuration(totalPrepMinutes) }}
+          </span>
+          <span v-if="recipe.cooking_duration">
+            · Cuisson : {{ formatCookingDuration(recipe.cooking_duration) }}
+          </span>
+          <template v-if="recipe.source">
+            ·
+            <a
+              :href="recipe.source"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-semibold text-sup-dark-green hover:underline"
+            >
+              Source
+            </a>
+          </template>
+        </div>
+        <div v-if="recipe.tags.length" class="mt-[10px] flex flex-wrap gap-1.5">
+          <span
+            v-for="tag in recipe.tags"
+            :key="tag.id"
+            class="rounded-full bg-sup-light-green/15 px-[10px] py-[3px] text-[11px] font-semibold text-sup-dark-green"
+          >
+            {{ capitalizeFirst(tag.name) }}
+          </span>
+        </div>
+      </div>
+
+      <div class="rounded-[10px] border border-sup-border bg-sup-withe p-6">
+        <div class="grid grid-cols-1 gap-8 sm:grid-cols-[220px_1fr]">
+          <div>
+            <div class="mb-[10px] flex items-center justify-between gap-2">
+              <h2 class="text-[17px] font-bold text-sup-dark-green">
+                Ingrédients
+              </h2>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="flex h-6 w-6 items-center justify-center rounded-full border border-sup-border text-sup-very-gray hover:bg-sup-light-gray disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Moins de personnes"
+                  :disabled="selectedPersons <= 1"
+                  @click="decrementPersons"
+                >
+                  −
+                </button>
+                <span
+                  class="min-w-[70px] text-center text-[12px] text-gray-400"
+                >
+                  {{ selectedPersons }} pers.
+                </span>
+                <button
+                  type="button"
+                  class="flex h-6 w-6 items-center justify-center rounded-full border border-sup-border text-sup-very-gray hover:bg-sup-light-gray"
+                  title="Plus de personnes"
+                  @click="incrementPersons"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <p
+              v-if="selectedPersons !== basePersons"
+              class="-mt-1 mb-[10px] text-[11px] text-gray-400"
+            >
+              Quantités recalculées ·
+              <button
+                type="button"
+                class="font-semibold text-sup-dark-green hover:underline"
+                @click="selectedPersons = basePersons"
+              >
+                Revenir à {{ basePersons }} pers.
+              </button>
+            </p>
+            <ul class="flex flex-col gap-2 text-[13.5px] text-sup-very-gray">
+              <li
+                v-for="line in recipe.ingredients"
+                :key="line.ingredient.id"
+                class="flex items-center gap-2"
+              >
+                <img
+                  v-if="line.ingredient.image"
+                  :src="line.ingredient.image"
+                  class="h-6 w-6 rounded object-cover"
+                />
+                <span>
+                  {{ formatNumber(scaledQuantity(line))
+                  }}{{ line.unity ? ` ${line.unity}` : "" }}
+                  {{ line.ingredient.name }}
+                </span>
+              </li>
+              <li
+                v-if="!recipe.ingredients.length"
+                class="text-[12px] text-gray-400"
+              >
+                Aucun ingrédient renseigné.
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 class="mb-[10px] text-[17px] font-bold text-sup-dark-green">
+              Étapes
+            </h2>
+            <div class="flex flex-col gap-4">
+              <div v-for="(step, index) in recipe.steps" :key="step.id">
+                <p class="mb-1 text-[14.5px] font-bold text-sup-very-gray">
+                  {{ index + 1 }}.
+                  {{ step.type === "cook" ? "Cuisson" : "Préparation" }}
+                  <span
+                    v-if="Number(duryToMinutes(step.dury)) > 0"
+                    class="text-[12px] font-normal text-gray-400"
+                  >
+                    ({{ formatNumber(duryToMinutes(step.dury)) }} min)
+                  </span>
+                </p>
+                <div
+                  class="text-[13.5px] text-sup-very-gray"
+                  v-html="renderStepMarkdown(step.description)"
+                />
+              </div>
+              <p v-if="!recipe.steps.length" class="text-[12px] text-gray-400">
+                Aucune étape renseignée.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="!canEdit"
+        class="mt-4 flex items-center gap-2 rounded-md border border-[#F0DE9A] bg-sup-yellow-warning/15 px-[14px] py-[10px] text-[12.5px] font-medium text-[#8A6D00]"
+      >
+        <IconAlertTriangle size="xs" class="shrink-0" />
+        Vous n'avez pas la permission de modifier cette recette.
+      </div>
+    </template>
+
+    <DeleteRecipeModal
+      v-if="recipe"
+      :open="deleteModalOpen"
+      :recipe-title="recipe.title"
+      :used-in-plannings="recipe.used_in_plannings"
+      @close="deleteModalOpen = false"
+      @confirm="confirmDelete"
+    />
+  </div>
+</template>

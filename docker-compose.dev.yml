@@ -3,7 +3,7 @@ services:
   # DATABASE SERVICE
   postgres:
     image: postgres:16
-    container_name: recipe_postgres
+    container_name: recipe_postgres_dev
     restart: unless-stopped
 
     environment:
@@ -29,7 +29,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile_dev
 
-    container_name: recipe_backend
+    container_name: recipe_backend_dev
 
     depends_on:
       postgres:
@@ -56,11 +56,15 @@ services:
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile_dev
 
-    container_name: recipe_frontend
+    container_name: recipe_frontend_dev
 
     depends_on:
       - backend
+
+    env_file:
+      - .env
 
     volumes:
       - ./frontend:/app

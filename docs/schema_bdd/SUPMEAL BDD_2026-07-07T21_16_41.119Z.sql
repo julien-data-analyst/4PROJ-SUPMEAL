@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS "recipe" (
 	"title" TEXT NOT NULL,
 	"image" TEXT,
 	"source" TEXT,
+	"cooking_duration" NUMERIC,
 	"creator_id" INTEGER NOT NULL,
 	"created_at" TIMESTAMP NOT NULL,
 	"updated_at" TIMESTAMP NOT NULL,
@@ -32,6 +33,7 @@ CREATE TABLE IF NOT EXISTS "user" (
 	"created_at" TIMESTAMP NOT NULL,
 	"updated_at" TIMESTAMP NOT NULL,
 	"profile_icon" TEXT NOT NULL,
+	"password" TEXT NOT NULL,
 	"email" TEXT NOT NULL,
 	PRIMARY KEY("id")
 );
@@ -65,6 +67,7 @@ CREATE TABLE IF NOT EXISTS "recipe_tag" (
 CREATE TABLE IF NOT EXISTS "ingredient" (
 	"id" INTEGER NOT NULL,
 	"name" TEXT NOT NULL,
+	"image" TEXT,
 	"created_at" TIMESTAMP NOT NULL,
 	"updated_at" TIMESTAMP NOT NULL,
 	PRIMARY KEY("id")

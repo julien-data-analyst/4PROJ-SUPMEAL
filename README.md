@@ -96,13 +96,13 @@ docker compose -f docker-compose.prod.yml down
 | Service     | URL                   |
 | ----------- | --------------------- |
 | Frontend    | http://localhost:3000 |
-| Backend API | http://localhost:8000 |
+| Backend API | http://localhost:8008 |
 
 ---
 
 ## 🌱 Development Workflow
 
-The `develop` branch is the main integration branch. 
+The `develop` branch is the main integration branch.
 Every new feature or bug fix must be developed in a dedicated branch before being merged into `develop`.
 
 ### Branch Naming Convention
@@ -176,7 +176,13 @@ Commit messages should:
 
 ## 📚 Documentation
 
-Additional documentation is available in the `docs/` directory.
+Additional documentation is available in the `docs/` directory:
+
+* [Architecture](docs/architecture.md) ([FR](docs/architecture.fr.md)) – services, how they communicate, dev vs prod
+* [Frontend](docs/frontend.md) ([FR](docs/frontend.fr.md)) – components, stores, composables, pages reference
+* [API](docs/api.md) ([FR](docs/api.fr.md)) – full HTTP API route reference
+* [Database](docs/database.md) ([FR](docs/database.fr.md)) – schema and Django models
+* [OAuth](docs/oauth.md) ([FR](docs/oauth.fr.md)) – Microsoft sign-in flow
 
 ---
 

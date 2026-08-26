@@ -1,0 +1,31 @@
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
+
+from .views import (
+    ChangeAvatarView,
+    ChangeEmailView,
+    ChangePasswordView,
+    LinkMicrosoftOAuthView,
+    LoginView,
+    LogoutView,
+    MicrosoftOAuthView,
+    RegisterView,
+    SafeTokenRefreshView,
+    UserViewSet,
+)
+
+router = DefaultRouter()
+router.register("", UserViewSet, basename="user")
+
+urlpatterns = [
+    path("register/", RegisterView.as_view(), name="user-register"),
+    path("login/", LoginView.as_view(), name="user-login"),
+    path("logout/", LogoutView.as_view(), name="user-logout"),
+    path("oauth/microsoft/", MicrosoftOAuthView.as_view(), name="oauth-microsoft"),
+    path("oauth/microsoft/link/", LinkMicrosoftOAuthView.as_view(), name="oauth-microsoft-link"),
+    path("change-password/", ChangePasswordView.as_view(), name="change-password"),
+    path("change-email/", ChangeEmailView.as_view(), name="change-email"),
+    path("change-avatar/", ChangeAvatarView.as_view(), name="change-avatar"),
+    path("token/refresh/", SafeTokenRefreshView.as_view(), name="token-refresh"),
+    path("", include(router.urls)),
+]
