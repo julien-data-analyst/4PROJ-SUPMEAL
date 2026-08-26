@@ -99,6 +99,10 @@ export interface RecipeListParams {
   in_planning?: boolean;
   favorite?: boolean;
   shared_with_me?: boolean;
+  prep_time_min?: number;
+  prep_time_max?: number;
+  cooking_duration_min?: number;
+  cooking_duration_max?: number;
   page?: number;
   page_size?: number;
 }

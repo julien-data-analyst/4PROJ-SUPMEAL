@@ -4,6 +4,7 @@ import { usePlanningStore } from "~/stores/usePlanningStore";
 import { useToastStore } from "~/stores/useToastStore";
 import { relativeTime } from "~/composables/useRecipes";
 import { PLANNING_TYPE_LABELS } from "~/composables/usePlanning";
+import { useCookbookName } from "~/composables/useCookbooks";
 import IconCalendar from "~/components/icons/IconCalendar.vue";
 import IconDots from "~/components/icons/IconDots.vue";
 import IconEye from "~/components/icons/IconEye.vue";
@@ -30,6 +31,8 @@ const props = withDefaults(
 
 const store = usePlanningStore();
 const toast = useToastStore();
+
+const cookbookName = useCookbookName(() => props.planning.cookbook);
 
 const menuOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
@@ -88,6 +91,17 @@ const menuItemClasses =
       <p class="truncate text-[11.5px] text-gray-400">
         {{ PLANNING_TYPE_LABELS[planning.type] }} · {{ mealCountLabel }} ·
         {{ relativeTime(planning.updated_at) }}
+      </p>
+      <p class="mt-0.5 truncate text-[11px] text-gray-400">
+        <NuxtLink
+          v-if="planning.cookbook"
+          :to="`/cookbooks/${planning.cookbook}/view`"
+          class="relative z-10 font-semibold text-sup-dark-green hover:underline"
+          @click.stop
+        >
+          {{ cookbookName || "Cookbook" }}
+        </NuxtLink>
+        <span v-else>Personnel</span>
       </p>
     </div>
 
