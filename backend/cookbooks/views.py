@@ -271,6 +271,18 @@ COOKBOOK_EXPORT_EXAMPLE = {
                 examples=[OpenApiExample("Exemple", value=True)],
             ),
             OpenApiParameter(
+                name="role",
+                type=OpenApiTypes.STR,
+                description=(
+                    "Filtre sur le role de l'utilisateur courant : `reader`, `commentator`, "
+                    "`editor` ou `creator`. N'inclut que les cookbooks partages avec lui a "
+                    "exactement ce role (`admin` n'est pas une valeur valide : c'est le role "
+                    "implicite du createur, jamais stocke - filtrer par un role reel exclut "
+                    "donc deja ses propres cookbooks)."
+                ),
+                examples=[OpenApiExample("Exemple", value="editor")],
+            ),
+            OpenApiParameter(
                 name="page",
                 type=OpenApiTypes.INT,
                 description="Numero de page a retourner.",

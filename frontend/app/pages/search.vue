@@ -11,7 +11,7 @@ import IconTag from "~/components/icons/IconTag.vue";
 import IconStar from "~/components/icons/IconStar.vue";
 import { useRecipeStore } from "~/stores/useRecipeStore";
 import { useCuisinePreferences } from "~/composables/useCuisinePreferences";
-import { sumStepMinutes, capitalizeFirst } from "~/composables/useRecipes";
+import { capitalizeFirst } from "~/composables/useRecipes";
 import { usePlanningStore } from "~/stores/usePlanningStore";
 import { useCookbookStore } from "~/stores/cookbooks/useCookbookStore";
 import {
@@ -85,6 +85,12 @@ const runSearch = async () => {
           f.favoriteScope === "all"
             ? undefined
             : f.favoriteScope === "favorite",
+        prep_time_min: f.prepTimeMin === "" ? undefined : f.prepTimeMin,
+        prep_time_max: f.prepTimeMax === "" ? undefined : f.prepTimeMax,
+        cooking_duration_min:
+          f.cookingTimeMin === "" ? undefined : f.cookingTimeMin,
+        cooking_duration_max:
+          f.cookingTimeMax === "" ? undefined : f.cookingTimeMax,
         page_size: PAGE_SIZE,
       });
     } else if (searchType.value === "plannings") {
@@ -103,8 +109,14 @@ const runSearch = async () => {
         page_size: PAGE_SIZE,
       });
     } else {
+      const f = cookbookFilters.value;
       await cookbookStore.fetchCookbooks({
-        name: cookbookFilters.value.name || undefined,
+        name: f.name || undefined,
+        shared_with_me:
+          f.ownershipScope === "all"
+            ? undefined
+            : f.ownershipScope === "shared",
+        role: f.ownershipScope === "shared" ? f.role || undefined : undefined,
         page_size: PAGE_SIZE,
       });
     }
@@ -126,37 +138,15 @@ onMounted(runSearch);
 
 const normalize = (value: string) => value.trim().toLowerCase();
 
+// Prep/cooking time are filtered backend-side (see `runSearch`) like every
+// other recipe attribute - only the free-text quick filter is applied
+// locally here, over whatever page the backend already returned.
 const filteredRecipes = computed(() => {
   const needle = normalize(quickFilter.value);
-  const f = recipeFilters.value;
-  return recipeStore.recipes.filter((recipe) => {
-    if (needle && !normalize(recipe.title).includes(needle)) return false;
-
-    if (f.prepTimeMin !== "" || f.prepTimeMax !== "") {
-      const prepMinutes = sumStepMinutes(recipe.steps);
-      if (f.prepTimeMin !== "" && prepMinutes < f.prepTimeMin) return false;
-      if (f.prepTimeMax !== "" && prepMinutes > f.prepTimeMax) return false;
-    }
-
-    if (f.cookingTimeMin !== "" || f.cookingTimeMax !== "") {
-      const cookingMinutes =
-        recipe.cooking_duration !== null
-          ? Number(recipe.cooking_duration)
-          : null;
-      if (
-        f.cookingTimeMin !== "" &&
-        (cookingMinutes === null || cookingMinutes < f.cookingTimeMin)
-      )
-        return false;
-      if (
-        f.cookingTimeMax !== "" &&
-        (cookingMinutes === null || cookingMinutes > f.cookingTimeMax)
-      )
-        return false;
-    }
-
-    return true;
-  });
+  if (!needle) return recipeStore.recipes;
+  return recipeStore.recipes.filter((recipe) =>
+    normalize(recipe.title).includes(needle),
+  );
 });
 
 const filteredPlannings = computed(() => {

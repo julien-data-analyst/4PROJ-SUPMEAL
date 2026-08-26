@@ -37,6 +37,10 @@ export interface CookbookWritePayload {
 export interface CookbookListParams {
   name?: string;
   shared_with_me?: boolean;
+  // Only meaningful alongside `shared_with_me: true` - narrows to cookbooks
+  // shared with the caller at exactly this role (never "admin", the
+  // creator's own implicit role - see backend's `CookbookFilter.filter_role`).
+  role?: Exclude<CookbookRole, "admin">;
   page?: number;
   page_size?: number;
 }

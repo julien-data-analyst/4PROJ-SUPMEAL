@@ -4,11 +4,13 @@ import IconSearch from "~/components/icons/IconSearch.vue";
 import CatalogMultiSelect from "~/components/search/CatalogMultiSelect.vue";
 import { PLANNING_TYPE_LABELS } from "~/composables/usePlanning";
 import { useRecipeStore } from "~/stores/useRecipeStore";
+import { COOKBOOK_ROLE_LABELS } from "~/composables/useCookbooks";
 import type {
   SearchType,
   RecipeFilterState,
   PlanningFilterState,
   CookbookFilterState,
+  CookbookRoleFilter,
 } from "~/composables/useSearch";
 
 withDefaults(defineProps<{ type: SearchType; showCookbookScope?: boolean }>(), {
@@ -26,6 +28,14 @@ const planningFilters = defineModel<PlanningFilterState>("planningFilters", {
 const cookbookFilters = defineModel<CookbookFilterState>("cookbookFilters", {
   required: true,
 });
+
+const roleOptions: { value: Exclude<CookbookRoleFilter, "">; label: string }[] =
+  [
+    { value: "reader", label: COOKBOOK_ROLE_LABELS.reader },
+    { value: "commentator", label: COOKBOOK_ROLE_LABELS.commentator },
+    { value: "editor", label: COOKBOOK_ROLE_LABELS.editor },
+    { value: "creator", label: COOKBOOK_ROLE_LABELS.creator },
+  ];
 
 const recipeStore = useRecipeStore();
 const fetchTagOptions = (search: string) =>
@@ -246,6 +256,39 @@ const rangeInputClasses =
           placeholder="Nom du cookbook..."
           :class="fieldInputClasses"
         />
+      </div>
+      <div>
+        <label :class="fieldLabelClasses" for="filter-cookbook-ownership">
+          Propriété
+        </label>
+        <select
+          id="filter-cookbook-ownership"
+          v-model="cookbookFilters.ownershipScope"
+          :class="fieldInputClasses"
+        >
+          <option value="all">Tous</option>
+          <option value="personal">Personnels</option>
+          <option value="shared">Partagés avec moi</option>
+        </select>
+      </div>
+      <div v-if="cookbookFilters.ownershipScope === 'shared'">
+        <label :class="fieldLabelClasses" for="filter-cookbook-role">
+          Rôle
+        </label>
+        <select
+          id="filter-cookbook-role"
+          v-model="cookbookFilters.role"
+          :class="fieldInputClasses"
+        >
+          <option value="">Tous</option>
+          <option
+            v-for="opt in roleOptions"
+            :key="opt.value"
+            :value="opt.value"
+          >
+            {{ opt.label }}
+          </option>
+        </select>
       </div>
     </div>
 

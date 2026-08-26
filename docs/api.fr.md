@@ -566,6 +566,7 @@ partagé.
 | --- | --- | --- |
 | `name` | string | Correspondance partielle insensible à la casse sur le nom du cookbook. |
 | `shared_with_me` | boolean | `true` : uniquement les cookbooks partagés avec l'appelant (dont il n'est pas propriétaire). `false` : uniquement ses propres cookbooks. |
+| `role` | string | Une valeur parmi `reader`, `commentator`, `editor`, `creator`. Uniquement les cookbooks partagés avec l'appelant à exactement ce rôle - `admin` n'est pas une valeur valide ici puisqu'il n'est jamais stocké (implicite pour le créateur du cookbook) : filtrer par un rôle réel exclut donc déjà ses propres cookbooks. |
 | `page` | integer | Numéro de page. |
 | `page_size` | integer | Éléments par page (100 maximum). |
 
